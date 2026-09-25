@@ -1,0 +1,12 @@
+ConvexAnalysis — convex analysis and subdifferential calculus for Lean 4 / Mathlib
+
+This package contains files ported from OptLib (https://github.com/optsuite/optlib),
+Copyright the OptLib authors, licensed under the Apache License, Version 2.0
+(see LICENSE). Ported from commit 5da27c5f95aa6a8a45b8c14b968ade4c13ff18c3
+(2026-08-05), which targets Lean/Mathlib v4.13.0.
+
+Modifications: the files under ConvexAnalysis/ were moved from the Optlib namespace
+of modules to ConvexAnalysis, and their proofs were updated to compile with
+Lean/Mathlib v4.33.1. Theorem names and statements are kept unless noted in
+PORTING.md. The algorithm files of OptLib (ADMM, BCD, LASSO, Nesterov, gradient,
+subgradient and proximal-gradient methods) are included under ConvexAnalysis/Algorithm.
