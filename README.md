@@ -38,12 +38,12 @@ Analysis*:
 | `ClosedFunction_Closure` | lower semicontinuous hull and closure `f.closure s`; `epi (cl f) = closure (epi f)`; `cl f = liminf f`; lsc ⟺ closed epigraph |
 | `AffineMinorant` | Thm 12.1: a closed proper convex function is the sup of its affine minorants |
 | `AffineMinorantExistence` | Cor 12.1.2: a proper convex function has an affine minorant (`exists_inner_minorant_of_proper_convex`); a real convex function on a set with nonempty interior has an affine minorant (`ConvexOn.exists_affine_le`) |
-| `ConvexConjugate` | conjugate `convex_conjugate s f`; Fenchel's inequality; `f*` is convex and lsc; `f*` is proper when `f` is proper and convex; Thm 12.2 (Fenchel–Moreau): `f** = cl f` for convex `f` (`bi_convex_conjugate_eq_closure`), `f** = f` for closed convex `f` (`bi_convex_conjugate_eq_self`); `f ↦ f*` is injective on closed proper convex functions |
+| `ConvexConjugate` | conjugate `convex_conjugate s f`; Fenchel's inequality; `f*` is convex and lsc; `f*` is proper when `f` is proper and convex; Thm 12.2 (Fenchel–Moreau): `f** = cl f` for convex `f` (`bi_convex_conjugate_eq_closure`), `f** = f` for closed convex `f` (`bi_convex_conjugate_eq_self`); `f ↦ f*` is injective on closed proper convex functions; Cor 12.2.2: `f*` can be computed over `ri (dom f)`; Thm 12.3: conjugate of `x ↦ g (A (x - a)) + ⟪x, a'⟫ + α` |
 | `ConvexSupport` | support function `s.convex_support`; `σ_C = σ_D ⟺ C = D` for closed convex sets; bounded `C` ⟺ finite `σ_C`; `cl f` of a convex `f` is convex; Thm 13.2: for a positively homogeneous convex `f ≠ ⊤`, `cl f = σ_C` with `C = {x | f* x ≤ 0}` |
 
-Upstream left six proofs as `sorry`. Four are proved here (among them Cor 12.1.2 and
-Thm 12.2), which restores the 11 declarations that depended on them. Two remain and are
-commented out in the source, marked `PORT:`: Cor 12.2.2 and Thm 12.3. See `PORTING.md`.
+Upstream left six proofs as `sorry`; all six are proved here. Two needed their statement
+corrected: Thm 12.3 takes `α : ℝ` rather than `EReal`, and Cor 12.2.2 assumes finite
+dimension. See `PORTING.md`.
 
 ## Additions
 
@@ -68,7 +68,7 @@ lake exe cache get && lake build
 
 All 36 ported OptLib files (theory and algorithms), the 9 ported Reaslib files and the 6
 added files compile against Mathlib v4.33.1 with no `sorry`. All 790 original OptLib
-declarations are kept; of the Reaslib files, all declarations are kept except the 2 listed
-in `PORTING.md`. Run `lake env lean scripts/AuditAxioms.lean` to check that no declaration depends on an
+declarations are kept; all Reaslib declarations of the ported files are kept, two with a corrected
+statement (see `PORTING.md`). Run `lake env lean scripts/AuditAxioms.lean` to check that no declaration depends on an
 axiom beyond `propext`, `Classical.choice`, `Quot.sound`. See `PORTING.md` for the per-file
 log and the (forced) statement changes.

@@ -1157,11 +1157,85 @@ variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 Corollary 12.2.2
 -/
 
-/- PORT: `convex_conjugate_in_ri` is commented out because it depends on its own `sorry` (upstream),
-   which has no proof yet; see PORTING.md. Uncomment once that is proved.
-theorem convex_conjugate_in_ri (s : Set E) (f : E → EReal) (hc : ConvexOn ℝ (dom s f) f) :
-    convex_conjugate s f = fun y ↦ ⨆ x ∈ intrinsicInterior ℝ (dom s f), ⟪x, y⟫ - f x := sorry
--/
+/- The upstream statement had no finite-dimensionality hypothesis. Without one it fails: in
+`ℓ²`, the nonnegative cone `C` spans the space but has empty interior, so its relative interior
+is empty. For `f = 0` on `C` and `⊤` elsewhere, the right side is `⊥` while `f* y ≥ ⟪0, y⟫ - 0`.
+Hence `[FiniteDimensional ℝ E]`, as in Rockafellar (who works in `ℝⁿ`). -/
+theorem convex_conjugate_in_ri [FiniteDimensional ℝ E] (s : Set E) (f : E → EReal)
+    (hc : ConvexOn ℝ (dom s f) f) :
+    convex_conjugate s f = fun y ↦ ⨆ x ∈ intrinsicInterior ℝ (dom s f), ⟪x, y⟫ - f x := by
+  ext y
+  set R := ⨆ x ∈ intrinsicInterior ℝ (dom s f), (⟪x, y⟫ : EReal) - f x
+  apply le_antisymm
+  · simp only [convex_conjugate]
+    refine iSup₂_le fun x hx => ?_
+    by_cases hxt : f x < ⊤
+    swap
+    · rw [not_lt_top_iff.1 hxt]; simp
+    have hxD : x ∈ dom s f := ⟨hx, hxt⟩
+    obtain ⟨z, hz⟩ := Set.Nonempty.intrinsicInterior hc.1 ⟨x, hxD⟩
+    have hzD : z ∈ dom s f := intrinsicInterior_subset hz
+    -- the points `t z + (1 - t) x`, `t ∈ (0, 1)`, lie in the relative interior
+    have hseg : ∀ t : ℝ, 0 < t → t < 1 → t • z + (1 - t) • x ∈ intrinsicInterior ℝ (dom s f) :=
+      fun t ht0 ht1 => openSegment_sub_intrinsicInterior ℝ hc.1 hz (subset_intrinsicClosure hxD)
+        ⟨t, 1 - t, ht0, by linarith, by ring, rfl⟩
+    have hR : ∀ t : ℝ, 0 < t → t < 1 →
+        (⟪t • z + (1 - t) • x, y⟫ : EReal) - f (t • z + (1 - t) • x) ≤ R := fun t ht0 ht1 =>
+      le_iSup₂_of_le (f := fun x _ => (⟪x, y⟫ : EReal) - f x) _ (hseg t ht0 ht1) le_rfl
+    have hconv : ∀ t : ℝ, 0 < t → t < 1 →
+        f (t • z + (1 - t) • x) ≤ (t : EReal) * f z + ((1 - t : ℝ) : EReal) * f x :=
+      fun t ht0 ht1 => hc.2 hzD hxD ht0.le (by linarith) (by ring)
+    -- if `f` takes `⊥` at `z` or at `x`, then `R = ⊤`
+    induction hfz : f z with
+    | top => exact absurd (hfz ▸ hzD.2) (lt_irrefl _)
+    | bot =>
+      have := le_iSup₂_of_le (f := fun x _ => (⟪x, y⟫ : EReal) - f x) z hz le_rfl
+      simp only [hfz, sub_bot (coe_ne_bot _)] at this
+      exact le_top.trans this
+    | coe v =>
+    induction hfx : f x with
+    | top => exact absurd (hfx ▸ hxt) (lt_irrefl _)
+    | bot =>
+      -- the midpoint of `z` and `x` also has value `⊥`
+      have h1 := hconv (1 / 2) (by norm_num) (by norm_num)
+      rw [hfz, hfx] at h1
+      have h2 : f ((1 / 2 : ℝ) • z + (1 - 1 / 2 : ℝ) • x) = ⊥ := by
+        refine le_bot_iff.1 (h1.trans ?_)
+        rw [show ((1 - 1 / 2 : ℝ) : EReal) * ⊥ = ⊥ from coe_mul_bot_of_pos (by norm_num)]
+        simp
+      have := hR (1 / 2) (by norm_num) (by norm_num)
+      rw [h2, sub_bot (coe_ne_bot _)] at this
+      exact le_top.trans this
+    | coe u =>
+    -- the affine bound `φ t ≤ R` for `t ∈ (0, 1)`, and `φ t → ⟪x, y⟫ - u` as `t → 0⁺`
+    set φ : ℝ → ℝ := fun t => t * (⟪z, y⟫ - v) + (1 - t) * (⟪x, y⟫ - u)
+    have hφ : ∀ t : ℝ, 0 < t → t < 1 → (φ t : EReal) ≤ R := by
+      intro t ht0 ht1
+      refine le_trans ?_ (hR t ht0 ht1)
+      have h1 := hconv t ht0 ht1
+      rw [hfz, hfx] at h1
+      have h2 : ((t : EReal) * v + ((1 - t : ℝ) : EReal) * u) = ((t * v + (1 - t) * u : ℝ) : EReal) := by
+        norm_cast
+      rw [h2] at h1
+      have h3 : (⟪t • z + (1 - t) • x, y⟫ : ℝ) = t * ⟪z, y⟫ + (1 - t) * ⟪x, y⟫ := by
+        rw [inner_add_left, real_inner_smul_left, real_inner_smul_left]
+      calc (φ t : EReal) = ((⟪t • z + (1 - t) • x, y⟫ - (t * v + (1 - t) * u) : ℝ) : EReal) := by
+            rw [h3]; simp only [φ]; congr 1; ring
+        _ = (⟪t • z + (1 - t) • x, y⟫ : EReal) - ((t * v + (1 - t) * u : ℝ) : EReal) := by
+            norm_cast
+        _ ≤ _ := EReal.sub_le_sub le_rfl h1
+    have hlim : Tendsto (fun t => (φ t : EReal)) (𝓝[>] 0) (𝓝 ((⟪x, y⟫ - u : ℝ) : EReal)) := by
+      have hc' : Continuous φ := by fun_prop
+      have := (continuous_coe_real_ereal.comp hc').tendsto 0
+      simp only [comp_apply, φ, zero_mul, zero_add, sub_zero, one_mul] at this
+      exact this.mono_left nhdsWithin_le_nhds
+    have hev : ∀ᶠ t in 𝓝[>] (0 : ℝ), (φ t : EReal) ≤ R := by
+      filter_upwards [Ioo_mem_nhdsGT (zero_lt_one' ℝ)] with t ht using hφ t ht.1 ht.2
+    have := le_of_tendsto hlim hev
+    simpa using this
+  · refine iSup₂_le fun x hx => ?_
+    exact le_iSup₂_of_le (f := fun x _ => (⟪x, y⟫ : EReal) - f x) x
+      (intrinsicInterior_subset hx).1 le_rfl
 
 
 end convex_conjugate_in_intrinsic_interior
@@ -1190,12 +1264,58 @@ noncomputable def ContinuousLinearEquiv.adjoint (A : E ≃L[ℝ] F) : F ≃L[ℝ
 Theorem 12.3
 -/
 
-/- PORT: `linearMap_convex_conjugate` is commented out because it depends on its own `sorry`
-   (upstream), which has no proof yet; see PORTING.md. Uncomment once that is proved.
-theorem linearMap_convex_conjugate {a a' : E} {α : EReal} (g : E → EReal)
-    (hg : ConvexOn ℝ (dom univ g) g) (A : E ≃L[ℝ] E) :
+/- The upstream statement had `{α : EReal}` and a convexity hypothesis on `g`. With `α = ⊥`
+and `g ≡ ⊤` it is false (in `EReal`, `⊤ + ⊥ = ⊥`, so the left side is `⊤` and the right side
+`⊥`), so `α` is real here, as in Rockafellar. Convexity of `g` is not needed: the proof is the
+change of variables `z = A (x - a)`. -/
+theorem linearMap_convex_conjugate {a a' : E} {α : ℝ} (g : E → EReal) (A : E ≃L[ℝ] E) :
     convex_conjugate univ (fun x ↦ g (A (x - a)) + ⟪x, a'⟫ + α) =
-    fun y ↦ (convex_conjugate univ g) (A.adjoint.symm (y - a')) + ⟪y, a⟫ - α - ⟪a, a'⟫ := sorry
--/
+    fun y ↦ (convex_conjugate univ g) (A.adjoint.symm (y - a')) + ⟪y, a⟫ - α - ⟪a, a'⟫ := by
+  ext y
+  set b := A.adjoint.symm (y - a')
+  set c : ℝ := ⟪y, a⟫ - α - ⟪a, a'⟫
+  -- the substitution `z = A (x - a)`
+  set e : E ≃ E := (Equiv.subRight a).trans A.toEquiv
+  have he : ∀ x, e x = A (x - a) := fun _ => rfl
+  -- the real part of the identity: `⟪x, y⟫ - ⟪x, a'⟫ - α = ⟪A (x - a), b⟫ + c`
+  have hreal : ∀ x, ⟪x, y⟫ - ⟪x, a'⟫ - α = ⟪A (x - a), b⟫ + c := by
+    intro x
+    have hb : ⟪A (x - a), b⟫ = ⟪x - a, y - a'⟫ := by
+      change ⟪(A : E →L[ℝ] E) (x - a), b⟫ = _
+      rw [← ContinuousLinearMap.adjoint_inner_right]
+      change ⟪x - a, A.adjoint (A.adjoint.symm (y - a'))⟫ = _
+      rw [ContinuousLinearEquiv.apply_symm_apply]
+    rw [hb]
+    simp only [c, inner_sub_left, inner_sub_right, real_inner_comm a y]
+    ring
+  have hterm : ∀ x, (⟪x, y⟫ : EReal) - (g (A (x - a)) + ⟪x, a'⟫ + α) =
+      ((⟪A (x - a), b⟫ : EReal) - g (A (x - a))) + c := by
+    intro x
+    have h := hreal x
+    induction g (A (x - a)) with
+    | bot => simp
+    | top => simp
+    | coe G =>
+      rw [show ((⟪A (x - a), b⟫ : ℝ) : EReal) - G + c = ((⟪A (x - a), b⟫ - G + c : ℝ) : EReal) by
+        norm_cast]
+      rw [show ((⟪x, y⟫ : ℝ) : EReal) - (G + ⟪x, a'⟫ + α) = ((⟪x, y⟫ - (G + ⟪x, a'⟫ + α) : ℝ) : EReal) by
+        norm_cast]
+      congr 1
+      linarith
+  simp only [convex_conjugate, mem_univ, iSup_pos]
+  simp_rw [hterm]
+  -- pull the constant out of the right-hand side
+  have hrhs : ∀ S : EReal, S + ⟪y, a⟫ - α - ⟪a, a'⟫ = S + c := by
+    intro S
+    induction S with
+    | bot => simp
+    | top => simp
+    | coe S => simp only [c]; norm_cast; ring
+  have hre := e.iSup_comp (g := fun z => (⟪z, b⟫ : EReal) - g z + c)
+  simp only [he] at hre
+  rw [hrhs, hre]
+  have hsup := biSup_add_coe_const (a := c) (f := fun z => (⟪z, b⟫ : EReal) - g z) (s := univ)
+  simp only [mem_univ, iSup_pos] at hsup
+  exact hsup.symm
 
 end linearMap_convex_conjugate

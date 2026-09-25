@@ -90,8 +90,8 @@ Changes common to all files, not listed per file:
 | ConvexAnalysis/IntrinsicInterior → Extended/IntrinsicInterior | ✓ | ~140 (37 under `lake env lean`, the rest under `lake build`) | `D_eq_projection`: `… '' C` → `… '' (WithLp.toLp 2 '' C)` (`WithLp` is a structure). Rename: `inv_eq_self` → `inv_eq_self'` (clashes with Mathlib's root `inv_eq_self`, a different statement) | `AffineSubspace.smul_vsub_vadd_mem` → `smul_vsub_vadd_mem'`; `WithLp.fst`, `WithLp.continuous_fst`; changed simp normal forms (`Fin.forall_fin_two`, product pairs) |
 | ConvexAnalysis/ClosedFunction_Closure → Extended/ClosedFunction_Closure | ✓ | not counted | Rename: `lowerSemicontinuousOn_iff` → `lowerSemicontinuousOn_iff'` (clashes with Mathlib's `lowerSemicontinuousOn_iff`, a different statement) | `lowerSemicontinuousWithinAt_iff`, `lowerSemicontinuousAt_iff` in place of unfolding; `Set.restrict_eq` deprecated |
 | ConvexAnalysis/AffineMinorant → Extended/AffineMinorant | ✓ | not counted | instance → theorem: `Nonempempty_of_empty`, `Nonempty_affine_minorant`, `empty_affine_minorant` | |
-| ConvexAnalysis/ConvexConjugate → Extended/ConvexConjugate | ✓ (10 declarations commented out, see below) | not counted | instance → theorem: `proper_convex_proper_conjugate` (commented out), `univ_convex_closure_proper'` (commented out) | import of `ClosedFunction_Closure_Proper` dropped (no declaration of it is used); `ContinuousLinearMap.adjoint_id` |
-| ConvexAnalysis/ConvexSupport → Extended/ConvexSupport | ✓ (7 declarations commented out, see below) | not counted | instance → theorem: `convex_support_is_proper_of_nonempty` | `iSup_subtype`; simp now rewrites `⟪x, x⟫` to `‖x‖ ^ 2` |
+| ConvexAnalysis/ConvexConjugate → Extended/ConvexConjugate | ✓ (four upstream `sorry`s proved, see below) | not counted | instance → theorem: `proper_convex_proper_conjugate` (commented out), `univ_convex_closure_proper'` (commented out) | import of `ClosedFunction_Closure_Proper` dropped (no declaration of it is used); `ContinuousLinearMap.adjoint_id` |
+| ConvexAnalysis/ConvexSupport → Extended/ConvexSupport | ✓ (two upstream `sorry`s proved, see below) | not counted | instance → theorem: `convex_support_is_proper_of_nonempty` | `iSup_subtype`; simp now rewrites `⟪x, x⟫` to `‖x‖ ^ 2` |
 
 Not ported: `ClosedFunction_Closure_Proper(_2)`, `affineset`, `LevelSet`, `seperationlaw` and
 `intrinsicInterior_Epigraph` (all contain unfinished proofs), `Reaslib/NumericalAlgebra`, and
@@ -101,8 +101,9 @@ above.
 
 ## Proofs supplied for upstream `sorry`s
 
-Upstream left six proofs as `sorry`. Four of them are now proved here. The 11 declarations
-that depended only on those four are restored with their upstream proofs unchanged:
+Upstream left six proofs as `sorry`. All six are now proved here; two of them needed their
+statement corrected because it was false as written. The 11 declarations that depended on
+them are restored with their upstream proofs unchanged:
 
 | Declaration | File | How |
 |---|---|---|
@@ -110,6 +111,8 @@ that depended only on those four are restored with their upstream proofs unchang
 | `bi_convex_conjugate_eq_closure` (Thm 12.2, `f** = cl f`) | ConvexConjugate | For proper `f`: every affine minorant is continuous and `≤ f`, so it is `≤` the lsc hull (`affine_le_closure_of_proper`). Conversely, `cl f` is proper (`closure_proper_of_proper_convex`, from Cor 12.1.2), convex (`closure_convexOn_univ_of_proper`) and lsc, so Thm 12.1 (`closed_convex_function_is_sup_of_affine_bound_univ'`) writes it as the sup of its affine minorants, which are minorants of `f` since `cl f ≤ f`. If `f` takes `⊥`, both sides are `⊥`; otherwise, if `f` is not proper, `f ≡ ⊤` and both sides are `⊤`. |
 | `univ_convex_closure_convex` | ConvexSupport | proper case: `closure_convexOn_univ_of_proper`; otherwise `cl f` is constant `⊥` or `⊤` |
 | `exist_f_bot_of_cl_bot` | ConvexSupport | if `f` is proper, `cl f` is proper, so it is not `⊥`; otherwise `f ≡ ⊤` unless it takes `⊥`. This no longer uses `univ_convex_closure_intrinsicInterior` from the unported `ClosedFunction_Closure_Proper`. |
+| `linearMap_convex_conjugate` (Thm 12.3: `(x ↦ g (A (x - a)) + ⟪x, a'⟫ + α)* y = g* ((A*)⁻¹ (y - a')) + ⟪y, a⟫ - α - ⟪a, a'⟫`) | ConvexConjugate | change of variables `z = A (x - a)` (`Equiv.iSup_comp`), a termwise identity checked separately for `g z = ⊥`, `⊤` and real, and `biSup_add_coe_const`. **Statement changed:** `α : EReal` → `α : ℝ`, because the upstream statement is false for `α = ⊥`, `g ≡ ⊤`, `A = id`, `a = a' = 0` (in `EReal`, `⊤ + ⊥ = ⊥`, so the left side is `⊤` and the right side `⊥`; checked in Lean). The hypothesis `ConvexOn ℝ (dom univ g) g` was dropped because the proof does not use it. Rockafellar also has `α ∈ ℝ`. |
+| `convex_conjugate_in_ri` (Cor 12.2.2: `f* y = sup_{x ∈ ri (dom f)} (⟪x, y⟫ - f x)`) | ConvexConjugate | For `x ∈ dom f` and `z ∈ ri (dom f)`, the points `t z + (1 - t) x`, `t ∈ (0, 1)`, lie in `ri (dom f)` (`openSegment_sub_intrinsicInterior`). Convexity bounds their value below by an affine function of `t`, which tends to `⟪x, y⟫ - f x` as `t → 0⁺`. If `f` takes `⊥`, both sides are `⊤`. **Statement changed:** added `[FiniteDimensional ℝ E]`. Without it the statement is false: in `ℓ²` the nonnegative cone has empty relative interior (not checked in Lean). Rockafellar works in `ℝⁿ`. |
 
 Restored with their upstream proofs: `bi_convex_conjugate_eq_self` (`f** = f` for closed convex
 `f`), `convex_conjugate_congr_iff`, `proper_convex_proper_conjugate`,
@@ -126,14 +129,3 @@ Changes to the file layout:
 - New helper lemmas in that section: `affine_le_lowerSemicontinuousHull`,
   `affine_le_closure_of_proper`, `closure_proper_of_proper_convex` and
   `closure_convexOn_univ_of_proper`.
-
-## Declarations commented out
-
-Two upstream proofs are still `sorry`. They are commented out in place with a `PORT:` marker,
-so the library stays free of `sorry` (checked with `scripts/AuditAxioms.lean`). Nothing else
-depends on them.
-
-| Declaration (no proof upstream) | File |
-|---|---|
-| `convex_conjugate_in_ri` (Cor 12.2.2: `f*` can be computed over `ri (dom f)`) | ConvexConjugate |
-| `linearMap_convex_conjugate` (Thm 12.3: conjugate of `x ↦ g(A x + a) + ⟪x, a'⟫ + α`) | ConvexConjugate |

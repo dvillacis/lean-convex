@@ -18,6 +18,6 @@ AffineMinorant,ConvexConjugate,ConvexSupport}.lean), Copyright the OptLib/Reasli
 licensed under the Apache License, Version 2.0. Ported from commit
 1ab89cf2c1c46bee690b7a13f0fdf697a491ba38 (2026-02-08), which targets Lean/Mathlib v4.24.0.
 Modifications: module names moved from Reaslib to ConvexAnalysis.Extended, proofs updated
-for Lean/Mathlib v4.33.1, proofs supplied for four upstream `sorry`s (including the new file
-ConvexAnalysis/Extended/AffineMinorantExistence.lean), and the two declarations still without
-a proof commented out; see PORTING.md.
+for Lean/Mathlib v4.33.1, and proofs supplied for the six upstream `sorry`s (including the new file
+ConvexAnalysis/Extended/AffineMinorantExistence.lean); two of those statements were corrected
+because they were false as written. See PORTING.md.
