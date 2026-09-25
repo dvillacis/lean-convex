@@ -61,3 +61,79 @@ Legend: ✓ ported (compiles, no `sorry`), statement changes listed per file.
 | Algorithm/LASSO | ✓ | ~20 | `EuclideanSpace` is a structure: `‖x‖₂` notation, the gradient lemmas and the `LASSO` fields `f'eq`, `update2` wrap vectors with `WithLp.toLp 2`; `real_inner_eq_dot`: `inner ℝ` (same meaning). New private helper `LASSO_L_pos` | `Matrix.l2_opNorm_mulVec` |
 | Algorithm/ADMM/Theroem_converge | ✓ | 15 | none (only indentation of continuation lines) | `dist_eq_norm`; `Summable.of_nonneg_of_le` |
 | Algorithm/BCD/Convergence | ✓ | 89 | `f_subdiff_block` with `WithLp.toLp 2 (u, v)` and `z.fst`/`z.snd`; `fconv`/`gconv`: `.fst`/`.snd`; `infEdist_bound`, `limitset_property_2`: `Metric.infEDist` (same function); `∑ k in` → `∑ k ∈` (same meaning) | `MapClusterPt.of_comp`; `not_bddBelow_of_tendsto_atBot`; `tendsto_atTop_of_antitone` |
+
+# Porting log (Reaslib, OptLib branch `Optlib-v4.24` → Mathlib v4.33.1)
+
+Source: commit `1ab89cf2c1c46bee690b7a13f0fdf697a491ba38` of the `Optlib-v4.24` branch
+(Lean `v4.24.0-rc1`, Mathlib `v4.24.0`). Files are under `ConvexAnalysis/Extended/` with their
+upstream names; `Reaslib.Basic.*` and `Reaslib.ConvexAnalysis.*` imports became
+`ConvexAnalysis.Extended.*`.
+
+Changes common to all files, not listed per file:
+
+- **Auto-bound implicits.** The upstream lakefile allows them; ours sets `autoImplicit = false`.
+  The missing binders (`{E : Type*}`, `{x : E}`, `universe u`, …) were added explicitly in the
+  position Lean would have given them, so the elaborated statements are unchanged.
+- **Instances that can never fire.** Current Lean rejects an `instance` with an argument that
+  instance search cannot fill (e.g. `hs : s.Nonempty`), with no option to turn the check off.
+  Such declarations became `theorem`s with the same name and statement (listed per file).
+  Anonymous ones now carry their auto-generated name.
+- **Renamed Mathlib modules.** `Topology.Semicontinuous` → `Topology.Semicontinuity.Basic`;
+  `Analysis.NormedSpace.HahnBanach.Separation` → `Analysis.LocallyConvex.Separation`.
+
+| File | Status | Errors fixed | Statement changes | Notes |
+|---|---|---|---|---|
+| Basic/EReal → Extended/EReal | ✓ | 4 | none | `add_le_add_left` argument order; `CompleteSemilatticeInf.sInf_le` removed |
+| Basic/ProperFunction → Extended/ProperFunction | ✓ | 9 | instance → theorem: `ProperFun_of_subset`, `ProperFunction.add`, `ProperFunction.sum`, `ProperFunction.congr`, and the two anonymous instances, now `instProperFunctionHSMulRealForallERealOfGeOfNat` (`m • f` proper) and `instProperFunctionOfForallMemSetAndLtERealBotTop` | simp now collapses `Fin 1` intersections and leaves `Finset.image` sums |
+| ConvexAnalysis/Epigraph → Extended/Epigraph | ✓ | 1 | none | a `simp` that no longer makes progress |
+| ConvexAnalysis/ConvexIndicator → Extended/ConvexIndicator | ✓ | 2 | instance → theorem: `ConvexIndicator_is_proper_on_univ` | `LowerSemicontinuous` is an abbrev of `Semicontinuous` (cannot be unfolded) |
+| ConvexAnalysis/IntrinsicInterior → Extended/IntrinsicInterior | ✓ | ~140 (37 under `lake env lean`, the rest under `lake build`) | `D_eq_projection`: `… '' C` → `… '' (WithLp.toLp 2 '' C)` (`WithLp` is a structure). Rename: `inv_eq_self` → `inv_eq_self'` (clashes with Mathlib's root `inv_eq_self`, a different statement) | `AffineSubspace.smul_vsub_vadd_mem` → `smul_vsub_vadd_mem'`; `WithLp.fst`, `WithLp.continuous_fst`; changed simp normal forms (`Fin.forall_fin_two`, product pairs) |
+| ConvexAnalysis/ClosedFunction_Closure → Extended/ClosedFunction_Closure | ✓ | not counted | Rename: `lowerSemicontinuousOn_iff` → `lowerSemicontinuousOn_iff'` (clashes with Mathlib's `lowerSemicontinuousOn_iff`, a different statement) | `lowerSemicontinuousWithinAt_iff`, `lowerSemicontinuousAt_iff` in place of unfolding; `Set.restrict_eq` deprecated |
+| ConvexAnalysis/AffineMinorant → Extended/AffineMinorant | ✓ | not counted | instance → theorem: `Nonempempty_of_empty`, `Nonempty_affine_minorant`, `empty_affine_minorant` | |
+| ConvexAnalysis/ConvexConjugate → Extended/ConvexConjugate | ✓ (10 declarations commented out, see below) | not counted | instance → theorem: `proper_convex_proper_conjugate` (commented out), `univ_convex_closure_proper'` (commented out) | import of `ClosedFunction_Closure_Proper` dropped (no declaration of it is used); `ContinuousLinearMap.adjoint_id` |
+| ConvexAnalysis/ConvexSupport → Extended/ConvexSupport | ✓ (7 declarations commented out, see below) | not counted | instance → theorem: `convex_support_is_proper_of_nonempty` | `iSup_subtype`; simp now rewrites `⟪x, x⟫` to `‖x‖ ^ 2` |
+
+Not ported: `ClosedFunction_Closure_Proper(_2)`, `affineset`, `LevelSet`, `seperationlaw` and
+`intrinsicInterior_Epigraph` (all contain unfinished proofs), `Reaslib/NumericalAlgebra`, and
+`Reaslib/Optlib/Algorithm/ADMM/Real_liminf` (a liminf for real sequences that nothing uses;
+Mathlib has `Filter.liminf`). The `Reaslib/Optlib` copy of OptLib is the one already ported
+above.
+
+## Proofs supplied for upstream `sorry`s
+
+Upstream left six proofs as `sorry`. Four of them are now proved here. The 11 declarations
+that depended only on those four are restored with their upstream proofs unchanged:
+
+| Declaration | File | How |
+|---|---|---|
+| `CCP_lower_bounded_by_affine` (Cor 12.1.2: a proper convex `f` has an affine minorant) | ConvexConjugate | new file `Extended/AffineMinorantExistence` (`exists_inner_minorant_of_proper_convex`). The domain is translated to contain `0` and restricted to its span `V`, where it has nonempty interior. `f` is real-valued and convex there, hence continuous on the interior (`ConvexOn.continuousOn_interior`). Separating a point below the graph from the open strict epigraph gives a minorant on the interior (`ConvexOn.exists_affine_le_of_mem_interior`), which extends to the whole domain through midpoints (`ConvexOn.exists_affine_le`) and is written as an inner product by Riesz on `V`. Upstream's sketch went through `cl f` being proper, which in turn used this lemma. |
+| `bi_convex_conjugate_eq_closure` (Thm 12.2, `f** = cl f`) | ConvexConjugate | For proper `f`: every affine minorant is continuous and `≤ f`, so it is `≤` the lsc hull (`affine_le_closure_of_proper`). Conversely, `cl f` is proper (`closure_proper_of_proper_convex`, from Cor 12.1.2), convex (`closure_convexOn_univ_of_proper`) and lsc, so Thm 12.1 (`closed_convex_function_is_sup_of_affine_bound_univ'`) writes it as the sup of its affine minorants, which are minorants of `f` since `cl f ≤ f`. If `f` takes `⊥`, both sides are `⊥`; otherwise, if `f` is not proper, `f ≡ ⊤` and both sides are `⊤`. |
+| `univ_convex_closure_convex` | ConvexSupport | proper case: `closure_convexOn_univ_of_proper`; otherwise `cl f` is constant `⊥` or `⊤` |
+| `exist_f_bot_of_cl_bot` | ConvexSupport | if `f` is proper, `cl f` is proper, so it is not `⊥`; otherwise `f ≡ ⊤` unless it takes `⊥`. This no longer uses `univ_convex_closure_intrinsicInterior` from the unported `ClosedFunction_Closure_Proper`. |
+
+Restored with their upstream proofs: `bi_convex_conjugate_eq_self` (`f** = f` for closed convex
+`f`), `convex_conjugate_congr_iff`, `proper_convex_proper_conjugate`,
+`univ_convex_closure_proper'`, `convex_conjugate_closure_eq_convex_conjugate`,
+`convex_conjugate_equiv`, `ccp_convex_conjugate_bijective`,
+`ccp_zero_or_inf_iff_conjugate_is_positive_homogeneous`, `closure_ccp_or_bot_of_convex_ne_top`,
+`conjugate_ccp_if_ccp`, `closure_eq_conjugate_of_positive_homogeneous_of_convex_ne_top`.
+
+Changes to the file layout:
+
+- `dom_univ_convex_closure_convex` was moved from ConvexSupport to ConvexConjugate (section
+  `closure_of_proper_convex`), with the same statement and proof, because the proof of Thm 12.2
+  needs it.
+- New helper lemmas in that section: `affine_le_lowerSemicontinuousHull`,
+  `affine_le_closure_of_proper`, `closure_proper_of_proper_convex` and
+  `closure_convexOn_univ_of_proper`.
+
+## Declarations commented out
+
+Two upstream proofs are still `sorry`. They are commented out in place with a `PORT:` marker,
+so the library stays free of `sorry` (checked with `scripts/AuditAxioms.lean`). Nothing else
+depends on them.
+
+| Declaration (no proof upstream) | File |
+|---|---|
+| `convex_conjugate_in_ri` (Cor 12.2.2: `f*` can be computed over `ri (dom f)`) | ConvexConjugate |
+| `linearMap_convex_conjugate` (Thm 12.3: conjugate of `x ↦ g(A x + a) + ⟪x, a'⟫ + α`) | ConvexConjugate |

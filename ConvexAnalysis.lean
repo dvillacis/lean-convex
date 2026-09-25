@@ -1,4 +1,4 @@
--- Root of the ConvexAnalysis library (see NOTICE, PORTING.md)
+-- Root of the ConvexAnalysis library (see NOTICE, PORTING.md, README.md)
 import ConvexAnalysis.Algorithm.ADMM.Inv_bounded
 import ConvexAnalysis.Algorithm.ADMM.Lemma
 import ConvexAnalysis.Algorithm.ADMM.Scheme
@@ -30,6 +30,16 @@ import ConvexAnalysis.Differential.Calculation
 import ConvexAnalysis.Differential.GradientDiv
 import ConvexAnalysis.Differential.Lemmas
 import ConvexAnalysis.Differential.Subdifferential
+import ConvexAnalysis.Extended.AffineMinorant
+import ConvexAnalysis.Extended.AffineMinorantExistence
+import ConvexAnalysis.Extended.ClosedFunction_Closure
+import ConvexAnalysis.Extended.ConvexConjugate
+import ConvexAnalysis.Extended.ConvexIndicator
+import ConvexAnalysis.Extended.ConvexSupport
+import ConvexAnalysis.Extended.EReal
+import ConvexAnalysis.Extended.Epigraph
+import ConvexAnalysis.Extended.IntrinsicInterior
+import ConvexAnalysis.Extended.ProperFunction
 import ConvexAnalysis.Function.KL
 import ConvexAnalysis.Function.L1Space
 import ConvexAnalysis.Function.Lsmooth

@@ -10,3 +10,14 @@ of modules to ConvexAnalysis, and their proofs were updated to compile with
 Lean/Mathlib v4.33.1. Theorem names and statements are kept unless noted in
 PORTING.md. The algorithm files of OptLib (ADMM, BCD, LASSO, Nesterov, gradient,
 subgradient and proximal-gradient methods) are included under ConvexAnalysis/Algorithm.
+
+The files under ConvexAnalysis/Extended/ are ported from the Reaslib part of the
+Optlib-v4.24 branch of the same repository (Reaslib/Basic/{EReal,ProperFunction}.lean and
+Reaslib/ConvexAnalysis/{Epigraph,ConvexIndicator,IntrinsicInterior,ClosedFunction_Closure,
+AffineMinorant,ConvexConjugate,ConvexSupport}.lean), Copyright the OptLib/Reaslib authors,
+licensed under the Apache License, Version 2.0. Ported from commit
+1ab89cf2c1c46bee690b7a13f0fdf697a491ba38 (2026-02-08), which targets Lean/Mathlib v4.24.0.
+Modifications: module names moved from Reaslib to ConvexAnalysis.Extended, proofs updated
+for Lean/Mathlib v4.33.1, proofs supplied for four upstream `sorry`s (including the new file
+ConvexAnalysis/Extended/AffineMinorantExistence.lean), and the two declarations still without
+a proof commented out; see PORTING.md.
