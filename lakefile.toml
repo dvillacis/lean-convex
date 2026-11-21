@@ -1,6 +1,8 @@
 name = "convexanalysis"
 version = "0.1.0"
 defaultTargets = ["ConvexAnalysis"]
+# Dependents download the compiled library from the GitHub release of the pinned tag.
+preferReleaseBuild = true
 
 [leanOptions]
 pp.unicode.fun = true
