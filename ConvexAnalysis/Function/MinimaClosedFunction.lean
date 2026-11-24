@@ -65,6 +65,7 @@ variable [FirstCountableTopology E] [FirstCountableTopology F]
 
 /- If a premiage of `f` is nonempty and compact,
   then its minimum point set `{x | IsMinOn f univ x}` is nonempty -/
+omit [DenselyOrdered F] in
 theorem IsMinOn.of_isCompact_preimage (hf : LowerSemicontinuous f) {y : F}
     (h1 : (f ⁻¹' Set.Iic y).Nonempty) (h2 : IsCompact (f ⁻¹' Set.Iic y)) :
     ∃ x, IsMinOn f univ x := by
@@ -91,6 +92,7 @@ theorem IsMinOn.of_isCompact_preimage (hf : LowerSemicontinuous f) {y : F}
 /- If a premiage of `f` is nonempty and compact,
   then its minimum point set `{x | IsMinOn f univ x}` is compact -/
 
+omit [DenselyOrdered F] in
 theorem IsCompact_isMinOn_of_isCompact_preimage (hf : LowerSemicontinuous f) {y : F}
     (h1 : (f ⁻¹' Set.Iic y).Nonempty) (h2 : IsCompact (f ⁻¹' Set.Iic y)) :
     IsCompact {x | IsMinOn f univ x} := by

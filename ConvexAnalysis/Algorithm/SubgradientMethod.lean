@@ -228,6 +228,7 @@ theorem subgradient_method_converge:
           (k + 1)) fun x => alg.a x ^ 2 := by apply h₂
       _ ≤ ‖x₀ - xm‖ ^ 2 + alg.G ^ 2 * Finset.sum (Finset.range (k + 1)) fun x => alg.a x ^ 2 := by simp
 
+omit [CompleteSpace E] in
 /-- convergence with fixed step size --/
 theorem subgradient_method_fix_step_size {t : ℝ}
     (ha' : ∀ (n : ℕ), alg.a n = t) :
@@ -253,6 +254,7 @@ theorem subgradient_method_fix_step_size {t : ℝ}
     _ = 2 * ((↑k + 1) * t) * (‖x₀ - xm‖ ^ 2 / (2 * (↑k + 1) * t) + ↑alg.G ^ 2 * t / 2) := by
       field_simp
 
+omit [CompleteSpace E] in
 /-- convergence with fixed $‖x^{i+1}-x^{i}‖$ --/
 theorem subgradient_method_fixed_distance {s : ℝ} (hm : IsMinOn f univ xm)
    (ha' : ∀ (n : ℕ), alg.a n * ‖alg.g n‖ = s) (hs : s > 0):

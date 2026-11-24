@@ -43,6 +43,7 @@ variable [ProperSpace E]
 /-
   The existence of the proximal for proper lower-semi-continuous function
 -/
+omit [InnerProductSpace ℝ E] [CompleteSpace E] in
 theorem prox_set_compact_of_lowersemi (f : E → ℝ) (hc : LowerSemicontinuous f)
     (lbdf : BddBelow (f '' univ)) :
     ∀ x, Nonempty (prox_set f x) ∧ IsCompact (prox_set f x) := by
@@ -301,6 +302,7 @@ theorem prox_set_compact_of_convex (f : E → ℝ) (hc : ContinuousOn f univ)
     simp only [Set.Iic_subset_Iic]
     exact minima z
 
+omit [InnerProductSpace ℝ E] [CompleteSpace E] in
 theorem prox_well_define (f : E → ℝ) (hc : LowerSemicontinuous f) (lbdf : BddBelow (f '' univ)) :
     ∀ x, ∃ y, prox_prop f x y := by
   intro x

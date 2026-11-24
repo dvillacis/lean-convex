@@ -38,7 +38,7 @@ theorem ProperFunction.to_neg {α : Type*} (s : Set α) (f : α → EReal) :
   · intro h
     by_cases h1 : ∃ x ∈ s, f x = ⊥
     · left; exact h1
-    push_neg at h1
+    push Not at h1
     obtain h2 := h (fun x a ↦ Ne.bot_lt' fun a_1 ↦ h1 x a (id (Eq.symm a_1)))
     right; exact h2
   intro h h1
@@ -188,7 +188,7 @@ theorem ProperFun_of_subset {α : Type*} {s t : Set α} {f : α → EReal}
   uninfinity := by
     intro x hx
     have h := hs hx
-    simp only [dom, Set.mem_setOf_eq] at h
+    simp only [dom, Set.mem_ofPred_eq] at h
     exact hsf.uninfinity x h.1
   existence_of_finite_value := by
     by_cases ht : t = ∅
@@ -304,7 +304,7 @@ theorem ProperFunction.sum {α : Type*} {s : Set α} {n : ℕ} {f : Fin n → α
         apply hxi
         exact Set.mem_range_self i
       exact this i.castSucc
-    letI : ProperFunction s (∑ i : Fin n, f i.castSucc) :=
+    let : ProperFunction s (∑ i : Fin n, f i.castSucc) :=
       nh (fun i ↦ hsf i.castSucc) hidti
     have : dom s (∑ i : Fin n, f i.castSucc) ∩ dom s (f (Fin.last n)) ≠ ∅ := by
       -- apply nh
@@ -349,7 +349,7 @@ lemma ProperFunctionConvexOn.sum {α : Type*} [AddCommMonoid α] [SMul ℝ α]
       intro i
       simp only [Set.mem_iInter] at hx
       exact hx i.castSucc
-    letI : ProperFunction d (∑ i : Fin n, t i.castSucc) :=
+    let : ProperFunction d (∑ i : Fin n, t i.castSucc) :=
       ProperFunction.sum (fun i ↦ hst i.castSucc) hidti
     apply ProperFunctionConvexOn.add
     · apply nh hidti (fun i ↦ h i.castSucc)
@@ -386,7 +386,7 @@ lemma ProperFunctionConvexOn.sum' {α} [AddCommMonoid α] [SMul ℝ α]
       intro j
       exact hx1 ⟨j, by simp⟩
     obtain hs1 := @hs t1 hpro hinter (fun i ↦ (h ⟨i, by simp⟩))
-    haveI : ProperFunction d (∑ i1 : { x // x ∈ s }, t1 ⟨i1, by simp⟩) := by
+    have : ProperFunction d (∑ i1 : { x // x ∈ s }, t1 ⟨i1, by simp⟩) := by
       classical
       let n := Fintype.card { x // x ∈ s }
       let e : Fin n ≃ { x // x ∈ s } := (Fintype.equivFin _).symm
@@ -403,7 +403,7 @@ lemma ProperFunctionConvexOn.sum' {α} [AddCommMonoid α] [SMul ℝ α]
         have hx' : ∀ i : { x // x ∈ s }, x ∈ dom d (t1 i) := by
           simpa [Set.mem_iInter] using hx
         simpa [f] using hx' (e j)
-      haveI : ProperFunction d (∑ j, f j) := ProperFunction.sum hpro' hinter'
+      have : ProperFunction d (∑ j, f j) := ProperFunction.sum hpro' hinter'
       have hfun :
           (∑ j, f j) = (∑ i1 : { x // x ∈ s }, t1 ⟨i1, by simp⟩) := by
         funext x

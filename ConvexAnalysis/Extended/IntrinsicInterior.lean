@@ -8,7 +8,7 @@ import Mathlib.Geometry.Convex.Cone.Basic
 import Mathlib.Geometry.Convex.Cone.Pointed
 import Mathlib.Analysis.Convex.Join
 
-set_option linter.style.commandStart true
+set_option linter.style.whitespace true
 
 
 /-!
@@ -86,7 +86,7 @@ def affSpanDirEquiv
       simpa only [affSpanEquiv, Equiv.toFun_as_coe, Equiv.coe_fn_mk]
       using .subtype_mk (.comp (continuous_sub_right _) continuous_subtype_val) _, by
       simpa only [affSpanEquiv, Equiv.toFun_as_coe, Equiv.coe_fn_mk]
-      using .subtype_mk (.comp (continuous_add_right _) continuous_subtype_val) _⟩
+      using .subtype_mk (.comp (continuous_add_const _) continuous_subtype_val) _⟩
 
 /-
 It is a function that maps affine space elements to the vector space V.
@@ -305,10 +305,10 @@ Theorem. The affine span of the product set `M × N` equals the product of the a
 `M` and `N`.
 -/
 theorem affineSpan_of_product_space [NontriviallyNormedField R] [NormedAddCommGroup α]
-    [NormedSpace R α] [Module R α] [NormedAddCommGroup β] [NormedSpace R β] [Module R β]
+    [NormedSpace R α] [NormedAddCommGroup β] [NormedSpace R β]
     (M : Set α) (N : Set β) : (affineSpan R (M ×ˢ N) :
     Set (α × β)) = (affineSpan R M : Set α) ×ˢ (affineSpan R N : Set β) := by
-  ext x; simp only [coe_affineSpan, spanPoints, Set.mem_prod, Set.mem_setOf_eq]
+  ext x; simp only [coe_affineSpan, spanPoints, Set.mem_prod, Set.mem_ofPred_eq]
   constructor
   · rintro ⟨⟨a, b⟩, ⟨ha, hb⟩, ⟨m, n⟩, hmn, hx⟩
     rw [Prod.eq_iff_fst_eq_snd_eq] at hx
@@ -338,10 +338,10 @@ theorem intrinsicInterior_prod_eq_prod_intrinsicInterior [NontriviallyNormedFiel
 
   by_cases neM : ¬M.Nonempty
   · rw [not_nonempty_iff_eq_empty.mp neM]; simp
-  push_neg at neM
+  push Not at neM
   by_cases neN : ¬N.Nonempty
   · rw [not_nonempty_iff_eq_empty.mp neN]; simp
-  push_neg at neN
+  push Not at neN
 
   /- Subtype Homeomorph -/
 
@@ -412,7 +412,7 @@ section Thm_6_1
 
 variable (𝕜) [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddCommGroup V] [Module 𝕜 V]
   [TopologicalSpace V] [IsTopologicalAddGroup V]
-  [ContinuousConstSMul 𝕜 V] [ContinuousSub V] [ContinuousAdd V]
+  [ContinuousConstSMul 𝕜 V] [ContinuousSub V]
 
 /-!
 Instance. Constant scalar multiplication on the direction space is continuous.
@@ -473,7 +473,7 @@ section Thm_6_2_pre
 
 variable (𝕜) [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [AddCommGroup V] [Module 𝕜 V]
   [TopologicalSpace V] [IsTopologicalAddGroup V]
-  [ContinuousConstSMul 𝕜 V] [ContinuousSub V] [ContinuousAdd V] {s : Set V}
+  [ContinuousConstSMul 𝕜 V] [ContinuousSub V] {s : Set V}
 
 /-
 Theorem 6.2 (first part).
@@ -852,10 +852,10 @@ section Thm_6_3_pre
 variable (𝕜) [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
   [TopologicalSpace 𝕜] [OrderTopology 𝕜]
   [AddCommGroup V] [Module 𝕜 V] [TopologicalSpace V] [IsTopologicalAddGroup V]
-  [ContinuousSMul 𝕜 V] [ContinuousSub V] [ContinuousAdd V] {s : Set V}
+  [ContinuousSMul 𝕜 V] [ContinuousSub V] {s : Set V}
 
 omit [TopologicalSpace 𝕜] [OrderTopology 𝕜] [TopologicalSpace V] [IsTopologicalAddGroup V]
-  [ContinuousSMul 𝕜 V] [ContinuousSub V] [ContinuousAdd V] in
+  [ContinuousSMul 𝕜 V] [ContinuousSub V] in
 lemma in_affineSpan_openSegment {x y : V} (h : x ≠ y) :
     x ∈ affineSpan 𝕜 (openSegment 𝕜 x y) := by
   refine (mem_coe ..).mp ?_
@@ -1436,7 +1436,7 @@ theorem intrinsicInterior_subset_intrinsicInterior_of_partly_subset_intrinsicFro
     by_contra h
     have : intrinsicInterior ℝ C2 ⊆ intrinsicFrontier ℝ C1 := by
       intro y hy
-      rw [←intrinsicClosure_diff_intrinsicInterior, intrinsicClosure_eq_closure]
+      rw [←intrinsicClosure_sdiff_intrinsicInterior, intrinsicClosure_eq_closure]
       use h1 (intrinsicInterior_subset hy)
       intro hy2; apply h ▸ mem_inter hy2 hy
     have : closure C2 ⊆ intrinsicFrontier ℝ C1 := by
@@ -1445,7 +1445,7 @@ theorem intrinsicInterior_subset_intrinsicInterior_of_partly_subset_intrinsicFro
       apply isClosed_intrinsicFrontier (closed_of_finiteDimensional _)
     rcases h2 with ⟨x, hx1, hx2⟩
     have h' := this (subset_closure hx1)
-    rw [←intrinsicClosure_diff_intrinsicInterior, intrinsicClosure_eq_closure] at h'
+    rw [←intrinsicClosure_sdiff_intrinsicInterior, intrinsicClosure_eq_closure] at h'
     exact h'.2 hx2
   rw [←intrinsicInterior_closure hC1]
   rw [iInter_intrinsicInterior_eq_intrinsicInterior_iInter' (hC1.closure) hC2 hn]
@@ -1842,7 +1842,7 @@ theorem intrinsicInterior_open {s : Set E} (hs : IsOpen s) : intrinsicInterior �
   by_cases hs' : s.Nonempty
   · intro x hx; rw [mem_intrinsicInterior, hs.affineSpan_eq_top hs']
     rw [interior_eq_iff_isOpen.2 (isOpen_induced hs)]; simp [hx]
-  · push_neg at hs'; simp [hs']
+  · push Not at hs'; simp [hs']
 
 
 /-
@@ -1853,6 +1853,7 @@ Then ri K = { (λ, x) | λ > 0 and x ∈ λ • ri C }.
 Purpose: describes the relative interior of the conic hull
 generated from a convex set in terms of positive scalings of its ri.
 -/
+set_option linter.deprecated false in
 theorem mem_intrinsicInterior_prod_convexCone_iff {C : Set E}
     (hC : Convex ℝ C) (hn : C.Nonempty) {K : ConvexCone ℝ (ℝ × E)}
     (hK : K = (convex_prod_singleton hC 1).toCone {(1, z) | z ∈ C}) :
@@ -1860,7 +1861,7 @@ theorem mem_intrinsicInterior_prod_convexCone_iff {C : Set E}
   let Cy : ℝ → Set E := fun y ↦ {z | (y, z) ∈ K}
   have hCy : ∀ y, Cy y = {z | (y, z) ∈ K} := fun y => by simp [Cy]
   have hCyt : ∀ t > 0, Cy t = t • C := fun t ht => by
-    ext z; simp only [Cy, hK, Set.mem_setOf_eq, Convex.mem_toCone, Set.mem_smul_set]
+    ext z; simp only [Cy, hK, Set.mem_ofPred_eq, Convex.mem_toCone, Set.mem_smul_set]
     constructor
     · rintro ⟨c, _, y, ⟨w, hw, rfl⟩, hyz⟩
       simp only [Prod.smul_mk, smul_eq_mul, mul_one, Prod.mk.injEq] at hyz
@@ -1895,6 +1896,7 @@ def ConvexCone.addPoint {R : Type u_2} {M : Type u_4} [Semiring R] [PartialOrder
     · simp [← ha]
     simp [C.smul_mem' ha hx]
 
+set_option linter.deprecated false in
 theorem ConvexCone.mem_toCone_addPoint {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
   [AddCommGroup M] [Module 𝕜 M] {s : Set M} (hs : Convex 𝕜 s) (hne : s.Nonempty) {x : M} :
   x ∈ (Convex.toCone s hs).addPoint ↔ ∃ c : 𝕜, 0 ≤ c ∧ ∃ y ∈ s, c • y = x := by
@@ -1914,6 +1916,7 @@ theorem ConvexCone.mem_toCone_addPoint {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜
     exact Or.inr ((Convex.mem_toCone hs).mpr ⟨c, hc, y, hy, hcy⟩)
 
 universe u_1 u_4 in
+set_option linter.deprecated false in
 def Convex.toCone_Point {𝕜 : Type u_1} {M : Type u_4} [Field 𝕜] [LinearOrder 𝕜]
     [IsStrictOrderedRing 𝕜] [AddCommGroup M] [Module 𝕜 M]
     (s : Set M) (hs : Convex 𝕜 s) : ConvexCone 𝕜 M where
@@ -1944,6 +1947,7 @@ theorem Convex.toCone_Point_nonempty {𝕜 : Type u_1} {M : Type u_4}
   ⟨0, Convex.toCone_Point_pointed s hs⟩
 
 universe u_1 u_4 in
+set_option linter.deprecated false in
 theorem Convex.mem_toCone_Point {𝕜 : Type u_1} {M : Type u_4}
     [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommGroup M] [Module 𝕜 M] {s : Set M} (hs : Convex 𝕜 s) (hne : s.Nonempty) {x : M} :
@@ -1999,7 +2003,7 @@ theorem mem_intrinsicInterior_prod_convexCone_iff' {C : Set E}
   have hne := (one_prod_eq C) ▸ (prod_nonempty_iff).mpr ⟨singleton_nonempty (1:ℝ),hn⟩
   have hCy : ∀ y, Cy y = {z | (y, z) ∈ K} := fun y => by simp [Cy]
   have hCyt : ∀ t ≥ 0, Cy t = t • C := fun t ht => by
-    ext z; simp only [Cy, hK, Set.mem_setOf_eq, Set.mem_smul_set]
+    ext z; simp only [Cy, hK, Set.mem_ofPred_eq, Set.mem_smul_set]
     rw [Convex.mem_toCone_Point _ hne]
     constructor
     · rintro ⟨c, _, y, ⟨w, hw, rfl⟩, hyz⟩
@@ -2046,11 +2050,12 @@ lemma Convex.convexCone_union {𝕜 M} [Field 𝕜] [LinearOrder 𝕜] [IsStrict
         (n/(m+n)) • z, ConvexCone.smul_mem_pointed b hb (div_nonneg hn (le_of_lt hmn)) hz
 
 
+set_option linter.deprecated false in
 lemma toCone_subset_convex {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommGroup M] [Module 𝕜 M] (s : ConvexCone 𝕜 M) (t : Set M) (ht : Convex 𝕜 t)
     (h : t ⊆ s) : (ht.toCone : Set M) ⊆ s := by
   rw [ht.toCone_eq_sInf]; norm_cast
-  apply sInf_le (mem_setOf_eq ▸ h)
+  apply sInf_le (mem_ofPred_eq ▸ h)
 
 lemma toCone_Pointed_subset_convex {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommGroup M] [Module 𝕜 M] (s : ConvexCone 𝕜 M) (hs : s.Pointed) (t : Set M)
@@ -2061,6 +2066,7 @@ lemma toCone_Pointed_subset_convex {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [I
   · exact hx0 ▸ hs
   · exact toCone_subset_convex s t ht h (mem_of_mem_insert_of_ne hx hx0)
 
+set_option linter.deprecated false in
 lemma Convex.subset_toCone_Point {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommGroup M] [Module 𝕜 M] {s : Set M} (hs : Convex 𝕜 s) :
     s ⊆ (hs.toCone_Point s : Set M) := fun x hx => by
@@ -2090,6 +2096,7 @@ lemma smul_convexCone_eq {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrd
   fun hx => mem_smul_set.2
     ⟨a⁻¹ • x, s.smul_mem (inv_pos.2 ha) hx, (smul_inv_smul₀ (by linarith) x)⟩⟩
 
+set_option linter.deprecated false in
 lemma Convex.toCone_Point_isLeast {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommGroup M] [Module 𝕜 M] {s : Set M} (hs : Convex 𝕜 s) :
     IsLeast { t : ConvexCone 𝕜 M | t.Pointed ∧ s ⊆ t } (hs.toCone_Point s) := by
@@ -2098,8 +2105,8 @@ lemma Convex.toCone_Point_isLeast {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [Is
   · rcases (hs.mem_toCone_Point hs').1 hx  with ⟨c, hc, y, hy, rfl⟩
     by_cases hc0 : c > 0
     · apply t.smul_mem hc0 (ht.2 hy)
-    · push_neg at hc0; rw [le_antisymm hc0 hc]; simp; exact ht.1
-  · push_neg at hs'; simp [hs', toCone_Point, toCone] at hx; exact hx.symm ▸ ht.1
+    · push Not at hc0; rw [le_antisymm hc0 hc]; simp; exact ht.1
+  · push Not at hs'; simp [hs', toCone_Point, toCone] at hx; exact hx.symm ▸ ht.1
 
 theorem Convex.toCone_Point_eq_sInf {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommGroup M] [Module 𝕜 M] {s : Set M} (hs : Convex 𝕜 s) :
@@ -2218,7 +2225,7 @@ theorem intrinsicInterior_convexHull_iUnion_eq {ι : Type} [Fintype ι] (C : ι 
         ext i; apply hi₀ i ▸ h
     · obtain ⟨i₀⟩ := Fintype.card_pos_iff.1 (Nat.lt_of_sub_eq_succ hι)
       let ι' := {i // i ≠ i₀}
-      haveI : Fintype ι' := Fintype.ofFinite ι'
+      have : Fintype ι' := Fintype.ofFinite ι'
       have hι' : Nonempty ι' := by
         have : Fintype.card ι' = n + 1 := by simpa [ι']
         obtain ⟨i⟩ := Fintype.card_pos_iff.1 (Nat.lt_of_sub_eq_succ this)

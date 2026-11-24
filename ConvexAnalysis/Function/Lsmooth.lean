@@ -198,7 +198,7 @@ variable {x y : E} {s v : Set E} {l : NNReal}
 open Set
 
 theorem lipschitz_to_lnorm_sub_convex (hs : Convex ℝ s)
-    (h₁ : ∀ x ∈ s, HasGradientAt f (f' x) x) (h₂ : LipschitzOnWith l f' s) (hl : l > 0) :
+    (h₁ : ∀ x ∈ s, HasGradientAt f (f' x) x) (h₂ : LipschitzOnWith l f' s) (_hl : l > 0) :
     ConvexOn ℝ s (fun x ↦ l / 2 * ‖x‖ ^ 2 - f x) := by
   rw [lipschitzOnWith_iff_norm_sub_le] at h₂
   let g' : E → E := fun x ↦ l.1 • x - f' x

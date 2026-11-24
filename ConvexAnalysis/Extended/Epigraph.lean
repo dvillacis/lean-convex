@@ -77,7 +77,7 @@ theorem epi_inter_iff_forall :
     f.Epi s = ⋂ i, ((g i).Epi s) ↔
     (∀ (x : E) (w : ℝ), (x ∈ s ∧ f x ≤ w ↔ (∀ i, x ∈ s ∧ g i x ≤ w))) := by
   simp [Function.Epi]
-  rw[Set.iInter_setOf, Set.ext_iff]
+  rw[Set.iInter_ofPred, Set.ext_iff]
   simp
 
 /-!
@@ -339,7 +339,7 @@ lemma convex_epi_convex_ineq_of_bot_within [NormedSpace ℝ E] (hf : Convex ℝ 
   obtain h4 := (hf h3 h2 hp hq hpq).2
   simp at h4; rw [h1] at h4; norm_cast at h4
   have h5 : ¬ r ≤ p • ((r - q • rn)/p - 1) + q • rn := by
-    push_neg at *
+    push Not at *
     rw [smul_sub p ((r - q • rn) / p) 1]
     simp; field_simp [hpq0.1]
     have : r - q * rn - p + q * rn = r - p := by linarith
@@ -373,7 +373,7 @@ theorem convex_epi_convex_ineq_of_bot [NormedSpace ℝ E] (hf : Convex ℝ (Epi 
   Then consider any point inside the line segment of the convex combination.
   Since f x = -∞ or f y = -∞, we transform the proof goal to f (a • x + b • y) ≤ -∞.
   -/
-  push_neg at c1
+  push Not at c1
   rcases h with hx_bot | hy_bot /- First consider f x = ⊥, actually x and y are symmetric,
   so we write a lemma here. -/
   · exact convex_epi_convex_ineq_of_bot_within hf hx h_dom ha hb c1 hab hx_bot y hy
@@ -405,7 +405,7 @@ lemma convex_epigraph_convex [NormedSpace ℝ E] (hf : Convex ℝ (f.Epi s)) :
   one of the points x and y is -∞, and a lemma has been written for this.
   -/
   · exact convex_epi_convex_ineq_of_bot hf hx hy (convex_epigraph_dom_convex hf) ha hb hab h
-  push_neg at h
+  push Not at h
   /-
   The case where f x ≠ -∞ and f y ≠ -∞.
   Since we are considering on dom s f, we have -∞ < f x, f y < ∞,

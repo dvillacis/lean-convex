@@ -8,7 +8,7 @@ import Mathlib.Data.Set.Card
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.Analysis.LocallyConvex.Separation
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
-import Mathlib.Topology.Algebra.Module.LinearMap
+import Mathlib.Topology.Algebra.Module.ContinuousLinearMap.Basic
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import Mathlib.Topology.Defs.Induced
 import ConvexAnalysis.Extended.AffineMinorant
@@ -201,7 +201,7 @@ lemma set_inclusion_convex_support_eq {z : E} (p q : Set E)
   rcases strict_separation1 with ⟨a, b, hab⟩
   have h₁ : ¬ ∀  (x : E), p.convex_support x = q.convex_support x := by
     simp [convex_support]
-    push_neg
+    push Not
     use a
     have h₂ : convex_conjugate univ p.convex_indicator a >
       convex_conjugate univ q.convex_indicator a := by
@@ -245,6 +245,7 @@ theorem convex_support_congr_iff (s t : Set E)
   exact fun a ↦ set_inclusion_convex_support_eq t s hscv hscl a (fun x => (h x).symm)
 
 -- The support function of a nonempty set is a proper function.
+omit [CompleteSpace E] in
 theorem convex_support_is_proper_of_nonempty {s : Set E} (hs : s.Nonempty) :
     ProperFunction univ s.convex_support where
   uninfinity := by
@@ -307,7 +308,7 @@ theorem convex_support_convex_of_convex {s : Set E} : ConvexOn ℝ univ s.convex
   · rw [hs, convex_support_empty]
     simp [ConvexOn]
     exact convex_univ
-  push_neg at hs
+  push Not at hs
   simp [convex_support]
   obtain := ConvexIndicator_is_proper_on_univ hs
   apply convex_conjugate_convex
@@ -318,11 +319,11 @@ lemma convex_conjugate_eq_bot {f : E → EReal}
   ext x; have h := congrFun h x
   simp [convex_conjugate] at h; simp
   specialize h x; by_contra hx1
-  push_neg at hx1
+  push Not at hx1
   by_cases hx2 : f x = ⊥
   · rw [hx2, EReal.sub_bot (EReal.coe_ne_bot _)] at h
     exact top_ne_bot h
-  push_neg at hx2
+  push Not at hx2
   lift f x to ℝ with fx;
   · exact ⟨hx1, hx2⟩
   rw [← EReal.coe_sub] at h
@@ -457,12 +458,12 @@ theorem ccp_zero_or_inf_iff_conjugate_is_positive_homogeneous
   simp
   rw[forall_congr'];intro m
   rw[imp_congr_right];intro hm
-  letI smul_proper:  ProperFunction univ (m • f) := by
+  let smul_proper:  ProperFunction univ (m • f) := by
     apply instProperFunctionHSMulRealForallERealOfGeOfNat huf
     exact (le_of_lt hm)
   rw [ccp_convex_conjugate_bijective ⟨hfc, hf, huf⟩]
   · exact Iff.symm funext_iff
-  letI : ProperFunction (dom univ (m • f)) f := by
+  let : ProperFunction (dom univ (m • f)) f := by
     rw[dom_eq_smul _ _ hm]
     exact ProperFunction.proper_of_dom
   constructor
@@ -501,13 +502,13 @@ theorem closure_ccp_or_bot_of_convex_ne_top {f : E → EReal} (hf : f ≠ ⊤)
     · exact univ_convex_closure_semicontinuous_of_proper f
     exact univ_convex_closure_proper' f hfc
   right; simp [Function.closure, hp];
-  by_contra hx; push_neg at hx
-  apply absurd hp; push_neg
+  by_contra hx; push Not at hx
+  apply absurd hp; push Not
   refine (properFunction_iff univ f).mpr ?_
   constructor
   · intro x _
     exact Ne.bot_lt' fun a ↦ hx x (id (Eq.symm a))
-  right; by_contra ht; push_neg at ht
+  right; by_contra ht; push Not at ht
   have : f = ⊤ := by ext x; simp; specialize ht x (by trivial); exact eq_top_iff.mpr ht
   apply absurd this hf
 
@@ -520,11 +521,11 @@ theorem conjugate_proper_of_proper {f : E → EReal} (_ : ConvexOn ℝ (dom univ
     by_contra hxl; simp at hxl
     simp at hf2;
     obtain hs := conjugate_of_bot_exist' ⟨x,  hxl⟩
-    apply absurd hf2; push_neg
+    apply absurd hf2; push Not
     simp; intro x; rw [congrFun hs x]; simp
   obtain ⟨hf1, hf2⟩ := hf
   simp at *;
-  by_contra ht; push_neg at ht; simp at ht
+  by_contra ht; push Not at ht; simp at ht
   obtain hs := conjugate_of_top ((eqOn_univ f ⊤).mp fun ⦃x⦄ _ ↦ ht x)
   rcases hf2 with ⟨x, _⟩; specialize hf1 x
   rw [congrFun hs x] at hf1; exact (lt_self_iff_false ⊥).mp hf1
@@ -632,10 +633,10 @@ theorem closure_eq_conjugate_of_positive_homogeneous_of_convex_ne_top [FiniteDim
     exact Eq.symm convex_support_empty
   have : ProperFunction univ f := by
     refine { uninfinity := ?uninfinity, existence_of_finite_value := ?existence_of_finite_value }
-    · push_neg at hb; intro x _
+    · push Not at hb; intro x _
       obtain hb := hb x
       exact Ne.bot_lt' (id (Ne.symm hb))
-    simp; by_contra hx; push_neg at hx
+    simp; by_contra hx; push Not at hx
     simp at hx; have : f = ⊤ := by ext x; rw [hx x]; simp
     exact hf this
   have : ProperFunction univ (convex_conjugate univ g) := by

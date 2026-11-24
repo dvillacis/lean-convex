@@ -655,7 +655,7 @@ def φ₁' [Setting E₁ E₂ F admm admm_kkt] : ℕ → ℕ+ := by
 
 local notation "φ₁" => φ₁' fullrank₁ fullrank₂
 
-lemma φ₁_equ [Setting E₁ E₂ F admm admm_kkt] [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ , φ₁ n = φ (n + 1) := by
+lemma φ₁_equ [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ , φ₁ n = φ (n + 1) := by
    intro n
    have : φ (n + 1) > 0 := by
       calc φ (n + 1)

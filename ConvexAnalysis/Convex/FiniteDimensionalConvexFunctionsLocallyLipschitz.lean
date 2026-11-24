@@ -425,6 +425,7 @@ lemma LocallyUpperBounded (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)
   apply ConvexOn.le_sup_of_mem_convexHull hf _ hx
   apply subset_convexHull
 
+omit [FiniteDimensional ℝ α] in
 lemma LocallyLipschitz_of_LocallyUpperBounded (hs : IsOpen s)
     (h : ∀ x ∈ s , ∃ t ∈ 𝓝[s] x , Convex ℝ t ∧ IsOpen t ∧ BddAbove (f '' t))
     (hf : ConvexOn ℝ s f)
