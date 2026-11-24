@@ -100,7 +100,7 @@ lemma non_proper_closure_exist_bot [NormedAddCommGroup E] (f : E → EReal)
   rcases hnp with hl | hr
   · exact h1 hl
   simp at hr
-  have : ¬ ∃ x ∈ univ, f x = ⊥ := by push_neg; intro x _; rw [hr x]; simp
+  have : ¬ ∃ x ∈ univ, f x = ⊥ := by push Not; intro x _; rw [hr x]; simp
   split_ifs at hx
   simp at hx
 
@@ -155,7 +155,7 @@ theorem closure_le_self (s : Set E) (f : E → EReal) :
   by_cases hf : ∃ x ∈ s, f x = ⊥
   · simp [hf]
   simp [hf]
-  push_neg at hf
+  push Not at hf
   apply top_of_ne_bot_of_ne_proper hsf hf hx
 
 end le_self
@@ -282,7 +282,7 @@ theorem closure_eq_self' [NormedAddCommGroup E] [NormedSpace ℝ E]
   by_cases h1 : ∀ x ∈ univ, f x ≠ ⊥
   · simp [h1]
     exact Eq.symm (top_of_ne_bot_of_ne_proper hsf h1 trivial)
-  push_neg at h1
+  push Not at h1
   have h' : ∀ x, f x = ⊥ := by
     apply bot_of_exist_bot_of_convex_of_univ
     exact hc
@@ -434,7 +434,7 @@ function.
 -/
 variable (f) in
 theorem lowerSemicontinuousWithinAt_iff_lowerSemicontinuousAt_restrict {x} (h : x ∈ s) :
-    LowerSemicontinuousWithinAt f s x ↔ LowerSemicontinuousAt (s.restrict f) ⟨x, h⟩ := by
+    LowerSemicontinuousWithinAt f s x ↔ LowerSemicontinuousAt (s.domRestrict f) ⟨x, h⟩ := by
   simp [lowerSemicontinuousWithinAt_iff, lowerSemicontinuousAt_iff]
   refine forall₂_congr ?h
   intro a ha
@@ -446,7 +446,7 @@ is lower semicontinuous.
 Purpose: relate lower semicontinuity on a set to lower semicontinuity of the restricted function.
 -/
 theorem lowerSemicontinuousOn_iff_lowerSemicontinuousOn_restrict :
-    LowerSemicontinuousOn f s ↔ LowerSemicontinuous (s.restrict f) := by
+    LowerSemicontinuousOn f s ↔ LowerSemicontinuous (s.domRestrict f) := by
   rw [LowerSemicontinuousOn, LowerSemicontinuous]
   constructor
   · rintro h ⟨x, xs⟩
@@ -463,9 +463,9 @@ Purpose: show that lower semicontinuity on a set can be characterized by preimag
 theorem lowerSemicontinuousOn_iff_isOpen_preimage :
     LowerSemicontinuousOn f s ↔
     ∀ y, ∃ u, IsOpen u ∧ f ⁻¹' Ioi y ∩ s = u ∩ s := by
-  have : ∀ t, IsOpen (s.restrict f ⁻¹' t) ↔ ∃ u , IsOpen u ∧ f ⁻¹' t ∩ s = u ∩ s := by
+  have : ∀ t, IsOpen (s.domRestrict f ⁻¹' t) ↔ ∃ u , IsOpen u ∧ f ⁻¹' t ∩ s = u ∩ s := by
     intro t
-    rw [isOpen_induced_iff, show s.restrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
+    rw [isOpen_induced_iff, show s.domRestrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
     simp only [Subtype.preimage_coe_eq_preimage_coe_iff]
     constructor <;>
       · rintro ⟨u, ou, useq⟩
@@ -482,9 +482,9 @@ Purpose: show that lower semicontinuity on a set can be characterized by preimag
 theorem lowerSemicontinuousOn_iff_isClosed_preimage :
     LowerSemicontinuousOn f s ↔
     ∀ y, ∃ u, IsClosed u ∧ f ⁻¹' Iic y ∩ s = u ∩ s := by
-  have : ∀ t, IsClosed (s.restrict f ⁻¹' t) ↔ ∃ u , IsClosed u ∧ f ⁻¹' t ∩ s = u ∩ s := by
+  have : ∀ t, IsClosed (s.domRestrict f ⁻¹' t) ↔ ∃ u , IsClosed u ∧ f ⁻¹' t ∩ s = u ∩ s := by
     intro t
-    rw [isClosed_induced_iff, show s.restrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
+    rw [isClosed_induced_iff, show s.domRestrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
     simp only [Subtype.preimage_coe_eq_preimage_coe_iff]
     constructor <;>
       · rintro ⟨u, ou, useq⟩
@@ -549,7 +549,7 @@ theorem lowersemicontinuoushul_intersection_of_closed (s : Set E) (f : E → ERe
     {p : E × EReal | p.1 ∈ s ∧ LowerSemicontinuousHull s f p.1 ≤ p.2} =
     ⋂ i : low_lowersemicontinous s f, {p : E × EReal | p.1 ∈ s ∧ i.h p.1 ≤ p.2} := by
   simp [LowerSemicontinuousHull]
-  rw [Set.iInter_setOf]
+  rw [Set.iInter_ofPred]
   ext x
   simp
   constructor
@@ -800,7 +800,7 @@ theorem cl_finite_of_finite [TopologicalSpace E] {f : E → EReal} {s : Set E}
     (hfs : LowerSemicontinuousOn f s) (hf : ∀ x ∈ s, ⊥ < f x ∧ f x < ⊤) :
     ∀ x ∈ s, ⊥ < f.closure s x ∧ f.closure s x < ⊤ := by
   intro x hx
-  letI hsf : ProperFunction s f := instProperFunctionOfForallMemSetAndLtERealBotTop hf
+  let hsf : ProperFunction s f := instProperFunctionOfForallMemSetAndLtERealBotTop hf
   constructor
   · simpa [closure_eq_self_of_proper hfs _ hx] using (hf x hx).1
   calc _
@@ -1260,7 +1260,7 @@ theorem f_mono_closure_mono
   simp [Function.closure, hsf]
   by_cases hf : ∃ x ∈ s, f₁ x = ⊥
   · simp [hf]
-  simp [hf]; push_neg at hf
+  simp [hf]; push Not at hf
   have xsf1x : ∀ x ∈ s, f₁ x = ⊤ := fun x a ↦ top_of_ne_bot_of_ne_proper hsf hf a
   have xsf2x : ∀ x ∈ s, f₂ x = ⊤ := by
     intro z hz; specialize mono z hz

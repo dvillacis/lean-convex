@@ -16,6 +16,7 @@ noncomputable section
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable {f : E → ℝ} {f' : E → (E →L[ℝ] ℝ)} {s : Set E}{x: E}
 
+omit [CompleteSpace E] in
 theorem Quasiconvex_first_order_condition_right (h : HasFDerivAt f (f' x) x) (xs : x ∈ s)
     (hf: QuasiconvexOn ℝ s f) : ∀ y ∈ s, f y ≤ f x  → f' x (y - x) ≤ 0 := by
   have h₁: ∀ ε > (0 : ℝ), ∃ δ > (0 : ℝ), ∀ (x' : E), ‖x - x'‖ ≤ δ →

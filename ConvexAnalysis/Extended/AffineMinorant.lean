@@ -379,10 +379,10 @@ theorem closed_convex_function_is_sup_of_affine_bound_univ
     (lowerSemicontinuousOn_univ_iff.mpr hfcl) hsf
   by_cases hfex : ∃ x, f x = ⊥
   · rcases hfex with ⟨u, hfu⟩
-    letI iem : IsEmpty (affine_minorant univ f) := empty_affine_minorant ⟨u, trivial, hfu⟩
+    let iem : IsEmpty (affine_minorant univ f) := empty_affine_minorant ⟨u, trivial, hfu⟩
     rw[iSup_of_empty]
     apply bot_of_exist_bot_of_convex_of_univ hf ⟨u, hfu⟩
-  push_neg at hfex
+  push Not at hfex
   have htop : ∀ x, f x = ⊤ := by
     intro x
     rcases this x trivial with hfx | hfx
