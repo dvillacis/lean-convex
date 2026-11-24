@@ -2,7 +2,8 @@ import ConvexAnalysis
 open Lean Elab Command
 
 /-- Lists every declaration of the `ConvexAnalysis` modules whose proof depends on an axiom
-other than `propext`, `Classical.choice`, `Quot.sound` (e.g. `sorryAx`). -/
+other than `propext`, `Classical.choice`, `Quot.sound` (e.g. `sorryAx`), and fails if there is
+one. -/
 elab "#audit_axioms" : command => do
   let env ← getEnv
   let std : List Name := [``propext, ``Classical.choice, ``Quot.sound]
@@ -18,6 +19,6 @@ elab "#audit_axioms" : command => do
     let extra := axs.toList.filter (fun a => !std.contains a)
     unless extra.isEmpty do bad := bad.push (n, extra)
   logInfo m!"declarations checked: {total}; with non-standard axioms: {bad.size}"
-  for (n, a) in bad do logInfo m!"{n}: {a}"
+  for (n, a) in bad do logError m!"{n}: {a}"
 
 #audit_axioms

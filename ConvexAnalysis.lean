@@ -1,4 +1,3 @@
--- Root of the ConvexAnalysis library (see NOTICE, PORTING.md, README.md)
 import ConvexAnalysis.Algorithm.ADMM.Inv_bounded
 import ConvexAnalysis.Algorithm.ADMM.Lemma
 import ConvexAnalysis.Algorithm.ADMM.Scheme

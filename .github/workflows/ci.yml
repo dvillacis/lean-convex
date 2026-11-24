@@ -1,0 +1,43 @@
+name: CI
+
+# On every pull request and every push to main: build, check that the root file imports
+# every module, and check that no declaration depends on a non-standard axiom.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Installs elan, downloads the Mathlib cache, then runs `lake build` and
+      # `lake exe mk_all --check`.
+      - uses: leanprover/lean-action@ba3fdfe5c4476c925da13bf11a005ddb47e47aee # v1.7.1
+        with:
+          lint: false
+          mk_all-check: true
+
+      # The build is up to date here, so this only replays the logs.
+      - name: No warnings
+        run: |
+          lake build > build.log 2>&1 || { cat build.log; exit 1; }
+          if grep -A 8 -E '^warning: (\./)?ConvexAnalysis' build.log; then
+            echo "::error::The build has warnings in ConvexAnalysis (listed above)."
+            exit 1
+          fi
+
+      - name: Axiom audit
+        run: lake env lean scripts/AuditAxioms.lean
