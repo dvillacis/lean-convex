@@ -23,21 +23,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Installs elan, downloads the Mathlib cache, then runs `lake build` and
-      # `lake exe mk_all --check`.
+      # Installs elan, downloads the Mathlib cache, then runs `lake build`,
+      # `lake exe mk_all --check` and `lake test` (builds `ConvexAnalysisTest`).
       - uses: leanprover/lean-action@ba3fdfe5c4476c925da13bf11a005ddb47e47aee # v1.7.1
         with:
           lint: false
+          test: true
           mk_all-check: true
 
       # The build is up to date here, so this only replays the logs.
       - name: No warnings
         run: |
-          lake build > build.log 2>&1 || { cat build.log; exit 1; }
+          lake build ConvexAnalysis ConvexAnalysisTest > build.log 2>&1 || { cat build.log; exit 1; }
           if grep -A 8 -E '^warning: (\./)?ConvexAnalysis' build.log; then
             echo "::error::The build has warnings in ConvexAnalysis (listed above)."
             exit 1
           fi
+
+      - name: The README example is the one that is tested
+        run: python3 scripts/check_readme.py
 
       - name: Axiom audit
         run: lake env lean scripts/AuditAxioms.lean
