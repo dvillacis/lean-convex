@@ -1,7 +1,8 @@
 name: CI
 
-# On every pull request and every push to main: build, check that the root file imports
-# every module, and check that no declaration depends on a non-standard axiom.
+# On every pull request and every push to main: build with Mathlib's style linters, check
+# that the root file imports every module, run the tests, check that definitions have
+# docstrings and that no declaration depends on a non-standard axiom.
 on:
   push:
     branches: [main]
@@ -42,6 +43,9 @@ jobs:
 
       - name: The README example is the one that is tested
         run: python3 scripts/check_readme.py
+
+      - name: Definitions have docstrings
+        run: lake env lean scripts/LintDocs.lean
 
       - name: Axiom audit
         run: lake env lean scripts/AuditAxioms.lean

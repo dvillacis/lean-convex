@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025  Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
+Copyright (c) 2025 Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
+Authors: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
 -/
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.LinearAlgebra.Dual.Basis
@@ -40,6 +40,8 @@ variable {E : Type*}
 Definition. Epigraph of a EReal function `f` over a set `s` is the region
 above the graph of `f` on `s`.
 -/
+/-- The epigraph of `f : E → EReal` over `s`: the pairs `(x, r) ∈ E × ℝ` with `x ∈ s` and
+`f x ≤ r`. -/
 def Function.Epi (f : E → EReal) (s : Set E) : Set (E × ℝ) :=
   {p : E × ℝ | p.1 ∈ s ∧ f p.1 ≤ p.2}
 
@@ -664,7 +666,8 @@ Lemma. For any `x ∈ s`, if `(x, a)` lies in the closure of the epigraph of `f`
 then `(x, b)` also lies in the closure of the epigraph of `f` on `s`.
 Purpose: extend closure membership from `a` to any `b` above it.
 -/
-lemma in_of_le_sinf {x : E} {a b : EReal} (hx : x ∈ s) (ha : (x, a) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2})
+lemma in_of_le_sinf {x : E} {a b : EReal} (hx : x ∈ s)
+    (ha : (x, a) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2})
     (hab : a ≤ b) :
     (x, b) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2} := by
   by_cases hatop : a = ⊤
@@ -728,6 +731,8 @@ This defines a function `closure_epi` that maps each point `x` in `E` to the inf
 `w` such that `(x, w)` lies in the closure of the epigraph of `f` on `s`.
 Purpose: An equivalent way to describe the closure.
 -/
+/-- The function `x ↦ sInf {w | (x, w) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2}}`: the
+lower boundary of the closure of the epigraph of `f` on `s`, taken in `E × EReal`. -/
 noncomputable def closure_epi (s : Set E) (f : E → EReal) :=
     fun x => sInf {w | (x, w) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2}}
 
@@ -832,7 +837,8 @@ Lemma. Let `f` be a proper function over `s`, and `x ∈ s` such that `f x < ⊤
 then `(x, f(x))` is in the epigraph of `f` over `s`.
 Purpose: a trivial property of epigraph.
 -/
-lemma xfxinepif {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f] (htop : f x < ⊤) (hx : x ∈ s) :
+lemma xfxinepif {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f]
+    (htop : f x < ⊤) (hx : x ∈ s) :
     (x, (f x).toReal) ∈ f.Epi s := by
   simp [Function.Epi]
   rw[← EReal.coe_toReal (x := f x) (LT.lt.ne_top htop) (LT.lt.ne_bot (hsf.uninfinity x hx))]
@@ -843,7 +849,8 @@ Lemma. Let `f` be a proper function over `s`, and `x ∈ s` such that `f x < ⊤
 then `(x, f(x) - 1)` is not an element of epigraph of `f` over `s`.
 Purpose: a trivial property of epigraph.
 -/
-lemma disj {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f] (htop : f x < ⊤) (hx : x ∈ s) :
+lemma disj {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f]
+    (htop : f x < ⊤) (hx : x ∈ s) :
     (x, (f x).toReal - 1) ∉ f.Epi s := by
   simp [Function.Epi]
   intro _

@@ -1,11 +1,24 @@
 /-
 Copyright (c) 2024 Zichen Wang, Yifan Bai, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Zichen Wang, Yifan Bai, Chenyi Li
+Authors: Zichen Wang, Yifan Bai, Chenyi Li
 -/
 import Mathlib.Analysis.Calculus.ContDiff.Basic
 import ConvexAnalysis.Function.Proximal
 import ConvexAnalysis.Differential.Subdifferential
+
+/-!
+# The Kurdyka-Łojasiewicz property
+
+This file defines the desingularizing functions `desingularizing_function η`, the KL property at
+a point (`KL_point`, `KL_point_with_reparameter`, `KL_property_with_regularization`) and KL
+functions (`KL_function`).
+
+The main results are that the graph of the limiting subdifferential is closed under convergence
+with convergent function values (`GraphOfSubgradientIsClosed`), that the KL property holds at
+every non-critical point (`KL_property_at_noncritical_point`), and the uniformized KL property on
+a compact set where the function is constant (`uniformized_KL_property`).
+-/
 
 open Filter BigOperators Set Topology
 noncomputable section
@@ -13,9 +26,13 @@ noncomputable section
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 variable {f : E → ℝ} {x : E}
 
+/-- The set of triples `(x, f x, u)` with `u` in the Fréchet subdifferential
+`f_subdifferential f x`. -/
 def limsubdifferential_Graph (f : E → ℝ) :=
   {(x, fx, u) : E × ℝ × E| fx = f x ∧ u ∈ f_subdifferential f x}
 
+/-- The graph of the limiting subdifferential of `f`: the set of pairs `(x, u)` with
+`u ∈ subdifferential f x`. -/
 def subdifferential_Graph (f : E → ℝ) :=
   {(x, u) : E × E| u ∈ subdifferential f x}
 
@@ -53,8 +70,8 @@ lemma subdifferential_Graph' (f : E → ℝ) :
         intro n; exact ⟨(exist_seq₁ n).2, x2_conv'⟩
 
 theorem GraphOfSubgradientIsClosed {f : E → ℝ}
-    {xn un : ℕ → E} {x u : E} (hx : ∀ n , (xn n, un n) ∈ subdifferential_Graph f)
-    (hconv : Tendsto (fun n => (xn n , un n)) atTop (𝓝 (x, u)))
+    {xn un : ℕ → E} {x u : E} (hx : ∀ n, (xn n, un n) ∈ subdifferential_Graph f)
+    (hconv : Tendsto (fun n => (xn n, un n)) atTop (𝓝 (x, u)))
     (hf : Tendsto (fun n => f (xn n)) atTop (𝓝 (f x))) :
     (x, u) ∈ subdifferential_Graph f := by
   rw [subdifferential_Graph',mem_ofPred_eq]
@@ -70,8 +87,11 @@ theorem GraphOfSubgradientIsClosed {f : E → ℝ}
   simp at hconv
   exact Tendsto.prodMk_nhds hconv.1 (Tendsto.prodMk_nhds hf hconv.2)
 
-/- Definition of Φ_η, the family of desingularizing function -/
-def desingularizing_function (η : ℝ) := {φ : ℝ → ℝ | (ConcaveOn ℝ (Ico 0 η) φ) -- ∧ (∀ x ∈ Ioo 0 η, φ x > 0)
+/-- The family `Φ_η` of desingularizing functions: the functions `φ : ℝ → ℝ` that are concave on
+`[0, η)`, satisfy `φ 0 = 0`, are `C¹` on `(0, η)`, continuous at `0`, and have `deriv φ x > 0`
+for all `x ∈ (0, η)`. -/
+def desingularizing_function (η : ℝ) := {φ : ℝ → ℝ | (ConcaveOn ℝ (Ico 0 η) φ)
+  -- ∧ (∀ x ∈ Ioo 0 η, φ x > 0)
   ∧ (φ 0 = 0) ∧ (ContDiffOn ℝ 1 φ (Ioo 0 η)) ∧ (ContinuousAt φ 0) ∧
   (∀ x ∈ Ioo 0 η, deriv φ x > 0)}
 
@@ -115,19 +135,26 @@ lemma desingularizing_function_is_nonneg (φ : ℝ → ℝ) (η : ℝ) (h : φ �
   have yleq: y < η := by linarith
   exact mul_pos (h₅ y hy₁ yleq) hx₁
 
--- Definition of KL property with specific desingularizing function
+/-- The KL property of `σ` at `u` with the specific desingularizing function `φ`: there are
+`η > 0` and a neighbourhood `s` of `u` with `φ ∈ desingularizing_function η` and
+`φ'(σ x - σ u) * dist(0, ∂σ x) ≥ 1` for all `x ∈ s ∩ active_domain σ` with
+`σ u < σ x < σ u + η`. -/
 def KL_point_with_reparameter (σ : E → ℝ) (u : E) (φ : ℝ → ℝ) : Prop :=
   ∃ η ∈ Ioi 0, ∃ s ∈ 𝓝 u, (φ ∈ desingularizing_function η) ∧  (∀ x ∈ s ∩
   {y ∈ active_domain σ | σ u < σ y ∧ σ y < σ u + η},
   deriv φ (σ x - σ u) * (Metric.infEDist 0 (subdifferential σ x)).toReal ≥ 1)
 
--- Definition of the KL property at one point
+/-- The KL property of `f` at `u`: there are `η > 0`, a neighbourhood `s` of `u` and
+`φ ∈ desingularizing_function η` such that `φ'(f x - f u) * dist(0, ∂f x) ≥ 1` for all `x ∈ s`
+with `f u < f x < f u + η`. -/
 def KL_point (f : E → ℝ) (u : E) : Prop :=
   ∃ η ∈ Ioi 0, ∃ s ∈ 𝓝 u, ∃ φ ∈ desingularizing_function η, ∀ x ∈ s ∩
   {y | f u < f y ∧ f y < f u + η},
-  (ENNReal.ofReal (deriv φ (f x - f u))) * (Metric.infEDist 0 (subdifferential f x)) ≥ ENNReal.ofReal 1
+  (ENNReal.ofReal (deriv φ (f x - f u))) * (Metric.infEDist 0 (subdifferential f x)) ≥
+    ENNReal.ofReal 1
 
--- Definition of the KL function
+/-- A KL function: `f` has the KL property `KL_point f u` at every point `u` of
+`active_domain f`. -/
 def KL_function (f : E → ℝ) : Prop :=
   ∀ u ∈ active_domain f, KL_point f u
 
@@ -135,11 +162,14 @@ def KL_function (f : E → ℝ) : Prop :=
 -- def desingularizing_function (c θ : ℝ) (_ : θ ∈ Ico 0 1) (_ : 0 < c) : ℝ → ℝ :=
 --   fun t ↦  c * t ^ (1 - θ)
 
-/- KL inequality for critical points -/
+/-- The KL inequality at `u'` written for the reparametrized function `x ↦ φ (f x - f u')`:
+there are `η > 0` and a neighbourhood `s` of `u'` with `φ ∈ desingularizing_function η` and
+`dist(0, ∂(φ ∘ (f · - f u')) x) ≥ 1` for all `x ∈ s ∩ active_domain f` with
+`f u' < f x < f u' + η`. -/
 def KL_property_with_regularization (f : E → ℝ) (u' : E) (φ : ℝ → ℝ) : Prop :=
   ∃ η ∈ Ioi 0, ∃ s ∈ 𝓝 u', (φ ∈ desingularizing_function η) ∧
   (∀ x ∈ s ∩ {y ∈ active_domain f | f u' < f y ∧ f y < f u' + η},
-  (Metric.infEDist 0 (subdifferential (λ u => φ (f u - f u')) x)).toReal ≥ 1)
+  (Metric.infEDist 0 (subdifferential (fun u => φ (f u - f u')) x)).toReal ≥ 1)
 
 -- deriv of function (fun t => c⁻¹ * t) is c⁻¹
 lemma deriv_of_const_mul_func (c : ℝ) (x : ℝ) : deriv (fun (t : ℝ) => c⁻¹ * t) x = c⁻¹ := by
@@ -149,14 +179,15 @@ lemma deriv_of_const_mul_func (c : ℝ) (x : ℝ) : deriv (fun (t : ℝ) => c⁻
     apply hasDerivAt_mul_const c⁻¹
 
 -- Function (fun t => c⁻¹ * t) is a desingularizing function
-lemma const_mul_special_concave : ∀ c > 0, (fun t => c⁻¹ * t) ∈ desingularizing_function (c / 2) := by
+lemma const_mul_special_concave : ∀ c > 0, (fun t => c⁻¹ * t) ∈
+    desingularizing_function (c / 2) := by
   intro c cpos; let φ := (fun t => c⁻¹ * t)
   have fun_smul_eq_mul: (fun t ↦ c⁻¹ * t) = (fun t ↦ c⁻¹ • t) := by
     ext t; rw [smul_eq_mul]
   have h₁: ConcaveOn ℝ (Ico 0 (c / 2)) φ := by
     rw [ConcaveOn]; constructor; apply convex_Ico
     intro x _ y _ a b _ _ _
-    show a • (c⁻¹ * x) + b • (c⁻¹ * y) ≤ c⁻¹ *  (a • x + b • y)
+    change a • (c⁻¹ * x) + b • (c⁻¹ * y) ≤ c⁻¹ *  (a • x + b • y)
     rw [← smul_mul_assoc, ← smul_mul_assoc]; repeat rw [smul_eq_mul]
     linarith
   -- have h₂: ∀ (x : ℝ), 0 < x → x < c / 2 → 0 < φ x := by
@@ -172,7 +203,7 @@ lemma const_mul_special_concave : ∀ c > 0, (fun t => c⁻¹ * t) ∈ desingula
 
 
 -- Type transformation: ENNReal.ofReal (1 / (↑n + 1)) = (1 / (↑n + 1))
-lemma one_div_type_trans: ∀ n : ℕ, ENNReal.ofReal (1 / (↑n + 1)) = (1 / (↑n + 1)) := by
+lemma one_div_type_trans : ∀ n : ℕ, ENNReal.ofReal (1 / (↑n + 1)) = (1 / (↑n + 1)) := by
     intro n
     have : ENNReal.ofReal (1 / (↑n + 1)) = ENNReal.ofReal 1 / ENNReal.ofReal (↑n + 1) := by
       apply ENNReal.ofReal_div_of_pos
@@ -253,7 +284,7 @@ lemma edist_geq_const (h_noncrit : 0 ∉ subdifferential f x) :
           intro n
           apply le_of_lt (hv n).right
         apply tendsto_zero_iff_norm_tendsto_zero.2 this
-      show (x, 0) ∈ subdifferential_Graph f
+      change (x, 0) ∈ subdifferential_Graph f
       apply GraphOfSubgradientIsClosed v_in_subdiff
         (Filter.Tendsto.prodMk_nhds u_to_x v_to_zero) fu_to_fx
     contradiction
@@ -280,7 +311,7 @@ end
 
 section aux_lemma_uniform_KL
 
-lemma real_geq_ennreal_ofreal_geq {a b : ℝ} {c : ENNReal} (hgeq : a ≥ b) (apos: a > 0):
+lemma real_geq_ennreal_ofreal_geq {a b : ℝ} {c : ENNReal} (hgeq : a ≥ b) (apos : a > 0) :
   (ENNReal.ofReal a) * c ≥ (ENNReal.ofReal b) * c := by
   by_cases hc : c = 0
   rw [hc]
@@ -294,7 +325,7 @@ lemma real_geq_ennreal_ofreal_geq {a b : ℝ} {c : ENNReal} (hgeq : a ≥ b) (ap
   rw [ha]
   simp
   push Not at hctop
-  show ENNReal.ofReal b * c ≤ ENNReal.ofReal a * c
+  change ENNReal.ofReal b * c ≤ ENNReal.ofReal a * c
   gcongr
 
 end aux_lemma_uniform_KL
@@ -302,7 +333,7 @@ end aux_lemma_uniform_KL
 variable {E : Type*}
 variable {f : E → ℝ} {x : E}
 
--- Definition of functions constant on a set
+/-- `f` is constant on the set `Ω`: `f x = f y` for all `x, y ∈ Ω`. -/
 def is_constant_on (f : E → ℝ) (Ω : Set E) : Prop :=
   ∀ x ∈ Ω, ∀ y ∈ Ω, f x = f y
 
@@ -318,7 +349,7 @@ variable [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 
 /-  Uniformized KL property -/
 theorem uniformized_KL_property {f : E → ℝ} {Ω : Set E} (h_compact : IsCompact Ω)
-    (h_Ω1 : ∀ x ∈ Ω, KL_point f x) (h_Ω2: is_constant_on f Ω) :
+    (h_Ω1 : ∀ x ∈ Ω, KL_point f x) (h_Ω2 : is_constant_on f Ω) :
     ∃ ε ∈ Ioi 0, ∃ η ∈ Ioi 0, ∃ φ ∈ desingularizing_function η, ∀ u ∈ Ω , ∀ x ∈
     {y : E | (Metric.infEDist y Ω).toReal < ε} ∩ {y  | f u < f y ∧ f y < f u + η},
     (ENNReal.ofReal (deriv φ (f x - f u))) * Metric.infEDist 0 (subdifferential f x) ≥ 1 := by
@@ -334,7 +365,8 @@ theorem uniformized_KL_property {f : E → ℝ} {Ω : Set E} (h_compact : IsComp
     -- case : Ω ≠ ∅
     push Not at h_nonempty
     obtain ⟨μ, constant_value⟩ := exist_constant_value f h_Ω2 h_nonempty
-    have : ∀ x ∈ Ω, ∃ η ∈ Ioi 0, ∃ (O : Set E) (_: IsOpen O) (_: x ∈ O),  ∃ φ ∈ desingularizing_function η,
+    have : ∀ x ∈ Ω, ∃ η ∈ Ioi 0, ∃ (O : Set E) (_: IsOpen O) (_: x ∈ O),
+      ∃ φ ∈ desingularizing_function η,
       ∀ u ∈ O ∩ {y | f x < f y ∧ f y < f x + η},
       (ENNReal.ofReal (deriv φ (f u - f x))) * Metric.infEDist 0 (subdifferential f u) ≥ 1 := by
         intro x hx; simp [KL_point] at h_Ω1
@@ -540,10 +572,9 @@ theorem uniformized_KL_property {f : E → ℝ} {Ω : Set E} (h_compact : IsComp
             ext c; exact Eq.symm (Finset.sum_apply c ht2.toFinset φ)
           rw [this]
         rw [equ₁]
-
         -- have : (∑ x ∈ ht2.toFinset, deriv (φ x) (f u - μ)) ≥ deriv (φ ui) (f u - μ) := by
         let g x := deriv (φ x) (f u - μ)
-        show (∑ x ∈ ht2.toFinset, g x) ≥ g ui
+        change (∑ x ∈ ht2.toFinset, g x) ≥ g ui
         apply Finset.single_le_sum
         intro c hc
         have σu_pos : f u - μ > 0 := by linarith [hu2]

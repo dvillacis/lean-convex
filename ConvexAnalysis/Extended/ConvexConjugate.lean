@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 The Reaslib authors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Reaslib authors
+-/
 import Mathlib.Order.LiminfLimsup
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Topology.Defs.Filter
@@ -13,6 +18,17 @@ import Mathlib.Analysis.InnerProductSpace.Adjoint
 import ConvexAnalysis.Extended.AffineMinorant
 import ConvexAnalysis.Extended.AffineMinorantExistence
 import ConvexAnalysis.Extended.EReal
+
+/-!
+# Convex conjugate of extended real-valued functions
+
+This file defines the convex conjugate `convex_conjugate s f` of a function `f : E → EReal` over a
+set `s`, given by `y ↦ ⨆ x ∈ s, ⟪x, y⟫ - f x`. The main results are the Fenchel inequality
+`fenchel_inequality`, the convexity and lower semicontinuity of the conjugate
+(`convex_conjugate_convex`, `lowerSemicontinuous_convex_conjugate`), the identification of the
+biconjugate with the closure (`bi_convex_conjugate_eq_closure`, `bi_convex_conjugate_eq_self`),
+and the permutation `convex_conjugate_equiv` of `ProperClosedConvexFunction E`.
+-/
 
 open Filter BigOperators Set Topology Inner Function Module EReal
 open scoped Pointwise
@@ -39,6 +55,7 @@ noncomputable section convex_conjugate_def
 
 variable (s : Set E) (f : E → EReal)
 
+/-- The convex conjugate of `f` over `s`: the function `y ↦ ⨆ x ∈ s, ⟪x, y⟫ - f x`. -/
 noncomputable def convex_conjugate : E → EReal :=
   fun y => ⨆ x ∈ s, ⟪x, y⟫ - f x
 
@@ -65,11 +82,9 @@ lemma E_EReal (a : ℝ) (b : EReal) : a - b ≤ 0 ↔ a ≤ b := by
   by_cases h₁ : b = ⊤
   · rw [h₁]
     exact Iff.symm (le_iff_le_of_cmp_eq_cmp rfl)
-
   by_cases h₂ : b = ⊥
   · rw [h₂]
     exact Iff.symm (le_iff_le_of_cmp_eq_cmp rfl)
-
   lift b to ℝ using ⟨h₁, h₂⟩
   rw [← EReal.coe_sub]
   simp only [EReal.coe_le_coe_iff]
@@ -191,7 +206,8 @@ convex conjugate), then `a * X ≤ a * sup Y` for any positive real number `a`. 
 of `EReal.mul_le_mul_of_nonneg` for the specific structure of the convex conjugate, handling
 the cases where the supremum might be `⊤` or a finite number.
 -/
-lemma real_mul_convex_conjugate_inequ {u x : E} {a fu : ℝ} [hsf : ProperFunction univ f] (ha : a > 0)
+lemma real_mul_convex_conjugate_inequ {u x : E} {a fu : ℝ} [hsf : ProperFunction univ f]
+    (ha : a > 0)
     (sup_inequ₁ : (Real.toEReal (inner ℝ u x) - fu) ≤ ⨆ u, Real.toEReal (inner ℝ u x) - f u) :
     Real.toEReal a * (Real.toEReal (inner ℝ u x) - fu)
     ≤ Real.toEReal a * ⨆ u, Real.toEReal (inner ℝ u x) - f u := by
@@ -1011,6 +1027,8 @@ end closure_conjugate
 
 section equiv
 
+/-- The set of functions `f : E → EReal` that are proper on `univ`, lower semicontinuous, and
+convex on `dom univ f`. -/
 def ProperClosedConvexFunction (E) [NormedAddCommGroup E] [InnerProductSpace ℝ E] :=
   {f: E → EReal | ProperFunction univ f ∧ LowerSemicontinuous f ∧ ConvexOn ℝ (dom univ f) f}
 
@@ -1042,6 +1060,8 @@ Proof Idea:
   proper closed convex function `g`. The proof is identical to `left_inv` because
   `f = g*` is itself a proper closed convex function (by the argument in `toFun`).
 -/
+/-- Conjugation `f ↦ convex_conjugate univ f` as a permutation of `ProperClosedConvexFunction E`,
+for `E` finite-dimensional; it is its own inverse. -/
 noncomputable def convex_conjugate_equiv
     (E) [NormedAddCommGroup E] [InnerProductSpace ℝ E] [FiniteDimensional ℝ E] :
     Equiv.Perm (ProperClosedConvexFunction E) where
@@ -1214,7 +1234,8 @@ theorem convex_conjugate_in_ri [FiniteDimensional ℝ E] (s : Set E) (f : E → 
       refine le_trans ?_ (hR t ht0 ht1)
       have h1 := hconv t ht0 ht1
       rw [hfz, hfx] at h1
-      have h2 : ((t : EReal) * v + ((1 - t : ℝ) : EReal) * u) = ((t * v + (1 - t) * u : ℝ) : EReal) := by
+      have h2 : ((t : EReal) * v + ((1 - t : ℝ) : EReal) * u) =
+          ((t * v + (1 - t) * u : ℝ) : EReal) := by
         norm_cast
       rw [h2] at h1
       have h3 : (⟪t • z + (1 - t) • x, y⟫ : ℝ) = t * ⟪z, y⟫ + (1 - t) * ⟪x, y⟫ := by
@@ -1246,6 +1267,8 @@ variable {E F : Type*}
   [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
   [NormedAddCommGroup F] [InnerProductSpace ℝ F] [CompleteSpace F]
 
+/-- The adjoint of a continuous linear equivalence `A : E ≃L[ℝ] F` between Hilbert spaces, as a
+continuous linear equivalence `F ≃L[ℝ] E`; its inverse is the adjoint of `A.symm`. -/
 noncomputable def ContinuousLinearEquiv.adjoint (A : E ≃L[ℝ] F) : F ≃L[ℝ] E where
   toFun := A.toContinuousLinearMap.adjoint
   map_add' := A.toContinuousLinearMap.adjoint.map_add'
@@ -1298,7 +1321,8 @@ theorem linearMap_convex_conjugate {a a' : E} {α : ℝ} (g : E → EReal) (A : 
     | coe G =>
       rw [show ((⟪A (x - a), b⟫ : ℝ) : EReal) - G + c = ((⟪A (x - a), b⟫ - G + c : ℝ) : EReal) by
         norm_cast]
-      rw [show ((⟪x, y⟫ : ℝ) : EReal) - (G + ⟪x, a'⟫ + α) = ((⟪x, y⟫ - (G + ⟪x, a'⟫ + α) : ℝ) : EReal) by
+      rw [show ((⟪x, y⟫ : ℝ) : EReal) - (G + ⟪x, a'⟫ + α) =
+          ((⟪x, y⟫ - (G + ⟪x, a'⟫ + α) : ℝ) : EReal) by
         norm_cast]
       congr 1
       linarith

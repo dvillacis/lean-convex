@@ -23,10 +23,11 @@ locally.
 
 | Check | Command |
 |---|---|
-| The library builds with no warnings | `lake build` |
+| The library builds with no warnings, including Mathlib's style linters | `lake build` |
 | The root file imports every module | `lake exe mk_all --check` (`lake exe mk_all` to fix) |
 | The tests build | `lake test` |
 | The README example is the tested one | `python3 scripts/check_readme.py` |
+| Every definition has a docstring | `lake env lean scripts/LintDocs.lean` |
 | No `sorry` and no new axiom | `lake env lean scripts/AuditAxioms.lean` |
 
 No `sorry` is merged, and no declaration may depend on an axiom beyond `propext`,

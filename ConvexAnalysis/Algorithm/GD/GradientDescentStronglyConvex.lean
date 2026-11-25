@@ -29,8 +29,8 @@ variable {a : ℝ} {x y : E} {l : NNReal}
 
 open Set
 
-theorem Strong_convex_Lipschitz_smooth (hsc: StrongConvexOn univ m f) (mp : m > 0)
-    (hf : ∀ x, HasGradientAt f (f' x) x) (h₂ : LipschitzWith l f') (hl : l > (0 : ℝ)):
+theorem Strong_convex_Lipschitz_smooth (hsc : StrongConvexOn univ m f) (mp : m > 0)
+    (hf : ∀ x, HasGradientAt f (f' x) x) (h₂ : LipschitzWith l f') (hl : l > (0 : ℝ)) :
     inner ℝ (f' x - f' y) (x - y) ≥ m * l / (m + l) * ‖x - y‖ ^ 2
     + 1 / (m + l) * ‖f' x - f' y‖ ^ 2 := by
   have hsc' := hsc
@@ -60,7 +60,7 @@ theorem Strong_convex_Lipschitz_smooth (hsc: StrongConvexOn univ m f) (mp : m > 
   by_cases coef: 0 < l - m
   · have eq1 : inner ℝ (g' x - g' y) (x - y) ≥ 1 / (l - m) * ‖g' x - g' y‖ ^ 2 := by
       apply convex_to_lower gderiv
-      show ConvexOn ℝ univ h; apply convh; apply coef; apply convg
+      change ConvexOn ℝ univ h; apply convh; apply coef; apply convg
     let alpha : E := f' x - f' y
     let beta : E := x - y
     have eq2 : g' x - g' y = alpha - m • beta := by
@@ -112,10 +112,10 @@ lemma lipschitz_derivxm_eq_zero (h₁ : ∀ x : E, HasGradientAt f (f' x) x)
   have hle : ‖f' xm‖ ^ 2 ≤ 0 := by nlinarith [sq_nonneg ‖f' xm‖]
   exact norm_eq_zero.mp ((pow_eq_zero_iff two_ne_zero).mp (le_antisymm hle (sq_nonneg _)))
 
-variable (hsc: StrongConvexOn univ m f) {alg : Gradient_Descent_fix_stepsize f f' x₀}
+variable (hsc : StrongConvexOn univ m f) {alg : Gradient_Descent_fix_stepsize f f' x₀}
 
 lemma gradient_method_strong_convex (hm : m > 0) (min : IsMinOn f univ xm)
-    (step₂ : alg.a ≤ 2 / (m + alg.l)) (hsc: StrongConvexOn univ m f) :
+    (step₂ : alg.a ≤ 2 / (m + alg.l)) (hsc : StrongConvexOn univ m f) :
     ∀ k : ℕ , ‖alg.x k - xm‖ ^ 2 ≤ (1 - alg.a *
     (2 * m * alg.l / (m + alg.l))) ^ k * ‖x₀ - xm‖ ^ 2 := by
   have : LipschitzWith alg.l f' := alg.smooth

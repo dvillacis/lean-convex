@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025  Zichen Wang, Chenyi Li. All rights reserved.
+Copyright (c) 2025 Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Zichen Wang, Chenyi Li
+Authors: Zichen Wang, Chenyi Li
 -/
 import Mathlib.Data.EReal.Basic
 import Mathlib.Analysis.Convex.Function
@@ -22,6 +22,8 @@ This file contains the definitions and properties of the proper functions
 open Filter BigOperators Set EReal
 open scoped Pointwise Topology
 
+/-- The function `f` is proper on `s`: `f x > ⊥` for all `x ∈ s`, and either `s` is empty or
+`f x < ⊤` for some `x ∈ s`. -/
 @[mk_iff]
 class ProperFunction {α : Type*} (s : Set α) (f : α → EReal) : Prop where
   -- f(x) > -∞
@@ -50,9 +52,11 @@ theorem ProperFunction.to_neg {α : Type*} (s : Set α) (f : α → EReal) :
   exact h
 
 --[Extend s f]
+/-- The function `f` takes the value `⊤` outside `s`: `f x = ⊤` for all `x ∉ s`. -/
 class Extend {α : Type*} (s : Set α) (f : α → EReal) where
   not_in_domain_is_infinity : ∀ x ∉ s, f x = ⊤
 
+/-- The effective domain of `f` on `s`: the points `x ∈ s` with `f x < ⊤`. -/
 @[simp]
 def dom {α : Type*} (s : Set α) (f : α → EReal) : Set α :=
     {x ∈ s | f x < ⊤}
@@ -70,7 +74,8 @@ theorem univ_proper_dom_not_empty {α : Type*} [AddCommMonoid α] (f : α → ER
   obtain h1 := h.2; simp at h1
   rcases h1 with ⟨x, hx⟩; use x; simp [hx]
 
-lemma convexOn_s_of_convexOn_dom_s_f {α : Type*} {f : α → EReal} [NormedAddCommGroup α] [NormedSpace ℝ α]
+lemma convexOn_s_of_convexOn_dom_s_f {α : Type*} {f : α → EReal} [NormedAddCommGroup α]
+    [NormedSpace ℝ α]
     [hsf : ProperFunction univ f] (hf : ConvexOn ℝ (dom univ f) f) : ConvexOn ℝ univ f := by
   constructor
   · apply convex_univ
@@ -95,7 +100,8 @@ lemma convexOn_s_of_convexOn_dom_s_f {α : Type*} {f : α → EReal} [NormedAddC
   have hy : y ∈ dom univ f := by simp; exact Ne.lt_top' fun a ↦ h2 (id (Eq.symm a))
   exact hf.2 hx hy ha hb hab
 
-lemma convexOn_dom_s_f_of_convexOn_s {α : Type*} {f : α → EReal} [NormedAddCommGroup α] [NormedSpace ℝ α]
+lemma convexOn_dom_s_f_of_convexOn_s {α : Type*} {f : α → EReal} [NormedAddCommGroup α]
+    [NormedSpace ℝ α]
     (hf : ConvexOn ℝ univ f) : ConvexOn ℝ (dom univ f) f := by
   constructor
   · apply Convex.inter hf.1
@@ -108,6 +114,7 @@ lemma convexOn_dom_s_f_of_convexOn_s {α : Type*} {f : α → EReal} [NormedAddC
 
 namespace Function
 
+/-- The real-valued function `x ↦ (f x).toReal` obtained from `f : α → EReal`. -/
 def toReal {α : Type*} (f : α → EReal) : α → ℝ :=
   fun x => (f x).toReal
 
@@ -167,6 +174,7 @@ theorem ProperFunctionConvexOn.smul {E : Type*} [AddCommMonoid E] [SMul ℝ E]
           refine EReal.smul_gt_bot_of_ge_zero ha (hsf.1 x hx)
         refine EReal.smul_gt_bot_of_ge_zero hb (hsf.1 y hy)⟩
 
+set_option linter.unusedDecidableInType false in
 lemma ConvexOn.sum {α : Type*} {𝕜 : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [IsOrderedRing 𝕜]
     [AddCommMonoid α] [SMul 𝕜 α]
     {ι : Type*} [DecidableEq ι] {s : Finset ι} {t : ι → α → 𝕜} {d : Set α}
@@ -519,7 +527,8 @@ theorem instProperFunctionOfForallMemSetAndLtERealBotTop {E : Type*} {f : E → 
     use x, hx
     exact (hf x hx).2
 
-lemma neg_proper_of_top {E : Type*} {s : Set E} {f : E → EReal} (h : ∀ x ∈ s, f x = ⊤) (hs : s ≠ ∅) : ¬ProperFunction s f := by
+lemma neg_proper_of_top {E : Type*} {s : Set E} {f : E → EReal} (h : ∀ x ∈ s, f x = ⊤)
+    (hs : s ≠ ∅) : ¬ProperFunction s f := by
   rintro ⟨_, hf2 | ⟨x, hx, hfx⟩⟩
   · exact hs hf2
   rw[h x hx] at hfx
@@ -538,7 +547,8 @@ lemma top_of_ne_bot_of_ne_proper {E : Type*} {x : E} {s : Set E} {f : E → ERea
   use x, hx
   exact Ne.lt_top' (id (Ne.symm hsf))
 
-lemma exist_xs_lt_top {E : Type*} {s : Set E} {f : E → EReal} [hsf : ProperFunction s f] (hs : s ≠ ∅) :
+lemma exist_xs_lt_top {E : Type*} {s : Set E} {f : E → EReal} [hsf : ProperFunction s f]
+    (hs : s ≠ ∅) :
     ∃ x ∈ s , f x < ⊤  := by
   rcases hsf.2 with hss | hss
   · exact False.elim (hs hss)
@@ -565,9 +575,7 @@ theorem ProperFuntion.conveximproper_nonfinte {E : Type*} [NormedAddCommGroup E]
     right;
     use x, hx
     exact Ne.lt_top hxor.1
-
   rw[lowerSemicontinuousOn_iff_le_liminf] at hfcl
-
   let xn : ℕ → E := fun n => ((n : ℝ) / n.succ) •  x  + ((1 : ℝ) / n.succ) • y
   have limxn : Tendsto xn atTop (𝓝 x) := by
     rw[← add_zero x]

@@ -1,13 +1,24 @@
 /-
-Copyright (c) 2024 Zichen Wang, Yifan Bai, Pengfei Hao, Yuqing Gao, Anqing Shen. All rights reserved.
+Copyright (c) 2024 Zichen Wang, Yifan Bai, Pengfei Hao, Yuqing Gao, Anqing Shen.
+All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Zichen Wang, Yifan Bai, Pengfei Hao, Yuqing Gao, Anqing Shen
+Authors: Zichen Wang, Yifan Bai, Pengfei Hao, Yuqing Gao, Anqing Shen
 -/
 import Mathlib.Topology.MetricSpace.Sequences
 import ConvexAnalysis.Algorithm.ADMM.Scheme
 import ConvexAnalysis.Algorithm.ADMM.Inv_bounded
 import ConvexAnalysis.Convex.FiniteDimensionalConvexFunctionsLocallyLipschitz
 import ConvexAnalysis.Convex.Subgradient
+
+/-!
+# Lemmas for the convergence of ADMM
+
+This file collects the lemmas used in the convergence proof of the ADMM iteration `ADMM` towards
+a KKT point `Existance_of_kkt`. It defines the error sequences `e₁`, `e₂`, `ey`, the subgradients
+`u`, `v`, and the quantities `Ψ`, `Φ`, `υ`, `M`. The main results are that `u n` and `v n` are
+subgradients of `f₁` and `f₂` at the iterates (`u_inthesubgradient`, `v_inthesubgradient`) and
+the descent inequality `Φ_isdescending` for `Φ`.
+-/
 
 noncomputable section
 
@@ -18,13 +29,18 @@ open scoped Pointwise
 variable {E₁ E₂ F : Type*}
    [NormedAddCommGroup E₁] [InnerProductSpace ℝ E₁] [FiniteDimensional ℝ E₁]
    [NormedAddCommGroup E₂] [InnerProductSpace ℝ E₂] [FiniteDimensional ℝ E₂]
-   [NormedAddCommGroup F ] [InnerProductSpace ℝ F ] [FiniteDimensional ℝ F ]
+   [NormedAddCommGroup F] [InnerProductSpace ℝ F] [FiniteDimensional ℝ F]
 
 variable (admm : ADMM E₁ E₂ F)
 
+/-- A KKT point of the problem solved by `admm`: a triple `(x₁, x₂, y)` together with a proof
+`h` that it satisfies `Convex_KKT`. -/
 structure Existance_of_kkt where
+   /-- The first primal component `x₁ : E₁` of the KKT point. -/
    x₁ : E₁
+   /-- The second primal component `x₂ : E₂` of the KKT point. -/
    x₂ : E₂
+   /-- The multiplier `y : F` of the KKT point. -/
    y : F
    h : Convex_KKT x₁ x₂ y admm.toOptProblem
 
@@ -34,6 +50,8 @@ namespace ADMM_Converge_Proof
 
 variable {admm admm_kkt}
 
+/-- A class without fields that records the ADMM iteration `admm` and a KKT point `admm_kkt` as
+`outParam`s, so that the definitions and lemmas below can refer to them through an instance. -/
 class Setting (E₁ E₂ F : outParam Type*)
     [NormedAddCommGroup E₁] [InnerProductSpace ℝ E₁] [FiniteDimensional ℝ E₁]
     [NormedAddCommGroup E₂] [InnerProductSpace ℝ E₂] [FiniteDimensional ℝ E₂]
@@ -66,37 +84,51 @@ lemma Satisfaction_ofthekkt : Convex_KKT x₁' x₂' y' admm.toOptProblem := adm
 
 --误差变量
 
+/-- The error `e₁ n = x₁ n - x₁'` of the first primal iterate with respect to the KKT point. -/
 def e₁ [Setting E₁ E₂ F admm admm_kkt] : ℕ → E₁ := fun n => (x₁ n) - x₁'
 
+/-- The error `e₂ n = x₂ n - x₂'` of the second primal iterate with respect to the KKT point. -/
 def e₂ [Setting E₁ E₂ F admm admm_kkt] : ℕ → E₂ := fun n => (x₂ n) - x₂'
 
+/-- The error `ey n = y n - y'` of the multiplier with respect to the KKT point. -/
 def ey [Setting E₁ E₂ F admm admm_kkt] : ℕ → F :=  fun n => (y  n) - y'
 
 --辅助变量
 --这里定义域需要是非0自然数
-def u [Setting E₁ E₂ F admm admm_kkt]: ℕ+ → E₁ :=
+/-- The auxiliary sequence, indexed by positive naturals,
+`u n = -A₁† (y n + ((1 - τ) * ρ) • (A₁ (e₁ n) + A₂ (e₂ n)) + ρ • A₂ (x₂ (n - 1) - x₂ n))`. -/
+def u [Setting E₁ E₂ F admm admm_kkt] : ℕ+ → E₁ :=
    fun n => - A₁† (y n + (( 1 - τ) * ρ ) • (A₁ (e₁ n) + A₂ (e₂ n)) + ρ • (A₂ (x₂ (n - 1) - x₂ n)))
 
-def v [Setting E₁ E₂ F admm admm_kkt]: ℕ → E₂ :=
+/-- The auxiliary sequence `v n = -A₂† (y n + ((1 - τ) * ρ) • (A₁ (e₁ n) + A₂ (e₂ n)))`. -/
+def v [Setting E₁ E₂ F admm admm_kkt] : ℕ → E₂ :=
    fun n => - A₂† (y n + (( 1 - τ) * ρ ) • (A₁ (e₁ n) + A₂ (e₂ n)))
 
-def Ψ [Setting E₁ E₂ F admm admm_kkt]: ℕ → ℝ  := fun n => 1 / ( τ * ρ ) * ‖ey n‖^2 + ρ * ‖A₂ (e₂ n)‖ ^ 2
+/-- The quantity `Ψ n = 1 / (τ * ρ) * ‖ey n‖ ^ 2 + ρ * ‖A₂ (e₂ n)‖ ^ 2`. -/
+def Ψ [Setting E₁ E₂ F admm admm_kkt] : ℕ → ℝ  :=
+   fun n => 1 / ( τ * ρ ) * ‖ey n‖^2 + ρ * ‖A₂ (e₂ n)‖ ^ 2
 
-def Φ [Setting E₁ E₂ F admm admm_kkt]: ℕ → ℝ  := fun n => (Ψ n) + ((max (1 - τ) (1 - 1 / τ)) * ρ ) * ‖A₁ (e₁ n) + A₂ (e₂ n)‖ ^2
+/-- The quantity `Φ n = Ψ n + max (1 - τ) (1 - 1 / τ) * ρ * ‖A₁ (e₁ n) + A₂ (e₂ n)‖ ^ 2`. -/
+def Φ [Setting E₁ E₂ F admm admm_kkt] : ℕ → ℝ  :=
+   fun n => (Ψ n) + ((max (1 - τ) (1 - 1 / τ)) * ρ ) * ‖A₁ (e₁ n) + A₂ (e₂ n)‖ ^2
 
+/-- The auxiliary sequence `υ n = y n + ((1 - τ) * ρ) • (A₁ (x₁ n) + A₂ (x₂ n) - b)`. -/
 def υ [Setting E₁ E₂ F admm admm_kkt] : ℕ → F  :=
    fun n => (y n) + ((1 - τ) * ρ) • (A₁ (x₁ n) + A₂ (x₂ n) - b)
 
+/-- The quantity, indexed by positive naturals with `n.natPred = n - 1`,
+`M n = (1 - τ) * ρ * ⟪A₂ (x₂ n - x₂ (n - 1)), A₁ (x₁ (n - 1)) + A₂ (x₂ (n - 1)) - b⟫`. -/
 def M [Setting E₁ E₂ F admm admm_kkt] : ℕ+ → ℝ  :=
-   fun n => ((1 - τ) * ρ) * (inner ℝ (A₂ ((x₂ n) - (x₂ n.natPred))) (A₁ (x₁ n.natPred) + A₂ (x₂ n.natPred) - b))
+   fun n => ((1 - τ) * ρ) * (inner ℝ (A₂ ((x₂ n) - (x₂ n.natPred)))
+      (A₁ (x₁ n.natPred) + A₂ (x₂ n.natPred) - b))
 
-lemma f₁_continuous [Setting E₁ E₂ F admm admm_kkt]: ContinuousOn f₁ univ :=
+lemma f₁_continuous [Setting E₁ E₂ F admm admm_kkt] : ContinuousOn f₁ univ :=
    FiniteDimensionalConvexFunctionsContinous convex_univ isOpen_univ OptProblem.cf₁
 
-lemma f₂_continuous [Setting E₁ E₂ F admm admm_kkt]: ContinuousOn f₂ univ :=
+lemma f₂_continuous [Setting E₁ E₂ F admm admm_kkt] : ContinuousOn f₂ univ :=
    FiniteDimensionalConvexFunctionsContinous convex_univ isOpen_univ OptProblem.cf₂
 
-lemma inner_convex1 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
+lemma inner_convex1 [Setting E₁ E₂ F admm admm_kkt] :∀ n : ℕ+ ,
       ConvexOn ℝ univ (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) := by
    dsimp [ConvexOn]
    intro n
@@ -111,10 +143,12 @@ lemma inner_convex1 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
             rw [abh]
             rw [one_smul]
             rw [add_sub]
-         _= aa • A₁ (xx) + bb • A₁ (yy) + aa • (A₂ (x₂ n.natPred) - b) + bb • (A₂ (x₂ n.natPred) - b) := by
+         _= aa • A₁ (xx) + bb • A₁ (yy) + aa • (A₂ (x₂ n.natPred) - b)
+            + bb • (A₂ (x₂ n.natPred) - b) := by
             rw [add_smul]
             rw [add_assoc (aa • A₁ (xx) + bb • A₁ (yy))]
-         _= aa • (A₁ (xx) + (A₂ (x₂ n.natPred) - b)) + bb • (A₁ (yy) + (A₂ (x₂ n.natPred) - b)) := by
+         _= aa • (A₁ (xx) + (A₂ (x₂ n.natPred) - b))
+            + bb • (A₁ (yy) + (A₂ (x₂ n.natPred) - b)) := by
             repeat rw [smul_add]
             rw [← add_assoc, add_assoc (aa • A₁ (xx)), add_comm (bb • A₁ (yy)), ← add_assoc]
    calc
@@ -125,11 +159,12 @@ lemma inner_convex1 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
       _= aa * ⟪y n.natPred , (A₁ (xx) + (A₂ (x₂ n.natPred) - b))⟫
           + bb * ⟪y n.natPred , (A₁ (yy) + (A₂ (x₂ n.natPred) - b))⟫ := by
          rw [inner_smul_right]; rw [inner_smul_right]
-      _= aa * ⟪y n.natPred , A₁ (xx) + A₂ (x₂ n.natPred) - b⟫ + bb * ⟪y n.natPred , A₁ (yy) + A₂ (x₂ n.natPred) - b⟫ := by
+      _= aa * ⟪y n.natPred , A₁ (xx) + A₂ (x₂ n.natPred) - b⟫
+          + bb * ⟪y n.natPred , A₁ (yy) + A₂ (x₂ n.natPred) - b⟫ := by
          rw [add_sub, add_sub]
    rfl
 
-lemma inner_convex2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
+lemma inner_convex2 [Setting E₁ E₂ F admm admm_kkt] :∀ n : ℕ+ ,
       ConvexOn ℝ univ (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) := by
    intro n
    let c := y n.natPred
@@ -138,13 +173,13 @@ lemma inner_convex2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
          (fun x => ⟪y n.natPred , (A₂ x) + ((A₁ (x₁ n)) - b)⟫) := by
       ext x;rw[add_comm,← add_sub]
    rw[this]
-   show ConvexOn ℝ univ (fun x => ⟪c , (A₂ x) + a⟫)
+   change ConvexOn ℝ univ (fun x => ⟪c , (A₂ x) + a⟫)
    have h : (fun x => ⟪c , (A₂ x) + a⟫) = (fun x => ⟪c , (A₂ x)⟫ + ⟪c , a⟫):= by
       ext x
       rw[← inner_add_right]
    let p := ⟪c , a⟫
    rw[h]
-   show ConvexOn ℝ univ (fun x => ⟪c , (A₂ x)⟫ + p)
+   change ConvexOn ℝ univ (fun x => ⟪c , (A₂ x)⟫ + p)
    apply ConvexOn.add _
    apply convexOn_const
    apply convex_univ
@@ -159,12 +194,12 @@ lemma inner_convex2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
          simp only [LinearMapClass.map_smul, RingHom.id_apply, smul_eq_mul]
          apply inner_smul_right
    }
-   show ConvexOn ℝ univ f
+   change ConvexOn ℝ univ f
    apply LinearMap.convexOn
    apply convex_univ
 
 -- ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2
-lemma norm_covex1 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
+lemma norm_covex1 [Setting E₁ E₂ F admm admm_kkt] :∀ n : ℕ+ ,
       ConvexOn ℝ univ (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2) := by
    intro n
    let c := - ((A₂ (x₂ n.natPred)) - b)
@@ -176,7 +211,7 @@ lemma norm_covex1 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
       ring
    rw[h]
    let f := (fun x => ‖(A₁ x) - c‖ ^ 2 / 2)
-   show ConvexOn ℝ univ (fun x => ρ • ‖(A₁ x) - c‖ ^ 2 / 2)
+   change ConvexOn ℝ univ (fun x => ρ • ‖(A₁ x) - c‖ ^ 2 / 2)
    have h1 : (fun x => ρ • ‖(A₁ x) - c‖ ^ 2 / 2) =
          (fun x => ρ • f x) := by
       ext x
@@ -197,7 +232,7 @@ lemma norm_covex1 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
       apply convex_univ
    apply ConvexOn.comp_linearMap (convex_of_norm_sq c h4)
 
-lemma norm_covex2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
+lemma norm_covex2 [Setting E₁ E₂ F admm admm_kkt] :∀ n : ℕ+ ,
       ConvexOn ℝ univ (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2) := by
    intro n
    let c := - ((A₁ (x₁ n)) - b)
@@ -210,7 +245,7 @@ lemma norm_covex2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
       ring
    rw[h]
    let f := (fun x => ‖(A₂ x) - c‖ ^ 2 / 2)
-   show ConvexOn ℝ univ (fun x => ρ • ‖(A₂ x) - c‖ ^ 2 / 2)
+   change ConvexOn ℝ univ (fun x => ρ • ‖(A₂ x) - c‖ ^ 2 / 2)
    have h1 : (fun x => ρ • ‖(A₂ x) - c‖ ^ 2 / 2) =
          (fun x => ρ • f x) := by
       ext x
@@ -236,17 +271,17 @@ lemma ADMM_iter_process₁'_eq3_1' [Setting E₁ E₂ F admm admm_kkt] : ∀ n :
    intro n
    apply hasGradientAt_const
 
-lemma ADMM_iter_process₁'_eq3_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₁'_eq3_1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       SubderivAt (fun _ => f₂ (x₂ n.natPred)) (x₁ n) = 0 := by
    intro n
    apply SubderivAt_eq_gradient (convexOn_const (f₂ (x₂ n.natPred)) (convex_univ))
    apply ADMM_iter_process₁'_eq3_1'
 
 -- gradient of f (x) = ⟪c , A x⟫
-lemma inner_gradient { α β : Type*}
-      [NormedAddCommGroup α]  [NormedAddCommGroup β]
+lemma inner_gradient {α β : Type*}
+      [NormedAddCommGroup α] [NormedAddCommGroup β]
       [InnerProductSpace ℝ α] [InnerProductSpace ℝ β]
-      [CompleteSpace α]  [CompleteSpace β] (A : α →L[ℝ] β)(c : β) :∀ x,
+      [CompleteSpace α] [CompleteSpace β] (A : α →L[ℝ] β) (c : β) :∀ x,
       HasGradientAt ((fun x => ⟪c , A x⟫)) ((A†) c) x := by
    intro x
    rw[HasGradient_iff_Convergence_Point]
@@ -258,12 +293,13 @@ lemma inner_gradient { α β : Type*}
    have := norm_nonneg (x - x1)
    rwa[mul_nonneg_iff_right_nonneg_of_pos εpos]
 
-lemma ADMM_iter_process₁'_eq3_2'_1 [Setting E₁ E₂ F admm admm_kkt](c : F) :∀ x,
+lemma ADMM_iter_process₁'_eq3_2'_1 [Setting E₁ E₂ F admm admm_kkt] (c : F) :∀ x,
       HasGradientAt ((fun x => ⟪c , (A₁ x)⟫)) (A₁† c) x := by
    apply inner_gradient
 
-lemma ADMM_iter_process₁'_eq3_2' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , ∀ x ,
-      HasGradientAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) (A₁† (y n.natPred)) x := by
+lemma ADMM_iter_process₁'_eq3_2' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ , ∀ x ,
+      HasGradientAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫)
+        (A₁† (y n.natPred)) x := by
    intro n x
    let c := y n.natPred
    let c₁ := ⟪y n.natPred ,(A₂ (x₂ n.natPred)) - b⟫
@@ -275,44 +311,47 @@ lemma ADMM_iter_process₁'_eq3_2' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : 
       exact inner_add_right (ADMM.y E₁ E₂ n.natPred) ((OptProblem.A₁ E₂) x)
             ((OptProblem.A₂ E₁) (ADMM.x₂ E₁ F n.natPred) - OptProblem.b E₁ E₂)
    rw[this]
-   show HasGradientAt ((fun x => ⟪c , (A₁ x)⟫ + c₁)) (A₁† c) x
+   change HasGradientAt ((fun x => ⟪c , (A₁ x)⟫ + c₁)) (A₁† c) x
    rw[hasGradientAt_iff_hasFDerivAt]
    apply HasFDerivAt.add_const c₁
-   show HasGradientAt ((fun x => ⟪c , (A₁ x)⟫)) (A₁† c) x
+   change HasGradientAt ((fun x => ⟪c , (A₁ x)⟫)) (A₁† c) x
    apply ADMM_iter_process₁'_eq3_2'_1
 
-lemma inner_continuous1 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
+lemma inner_continuous1 [Setting E₁ E₂ F admm admm_kkt] :∀ n : ℕ+ ,
       ContinuousOn (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) univ:= by
    intro n
-   have :∀ x ∈ univ,HasGradientAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) (A₁† (y n.natPred)) x := by
+   have :∀ x ∈ univ,
+     HasGradientAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫)
+       (A₁† (y n.natPred)) x := by
       intro x _
       apply ADMM_iter_process₁'_eq3_2' n
    apply HasGradientAt.continuousOn
    exact this
 
-lemma ADMM_iter_process₁'_eq3_2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      SubderivAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) (x₁ n) = { A₁† (y n.natPred)} := by
+lemma ADMM_iter_process₁'_eq3_2 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      SubderivAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫)
+        (x₁ n) = { A₁† (y n.natPred)} := by
    intro n
    apply SubderivAt_eq_gradient (inner_convex1 n)
    apply ADMM_iter_process₁'_eq3_2'
 
-lemma norm_comm {α β: Type*}
+lemma norm_comm {α β : Type*}
       [NormedAddCommGroup α] [InnerProductSpace ℝ α]
       [NormedAddCommGroup β] [InnerProductSpace ℝ β]
-      (A : α →L[ℝ] β) (a₁ a₂ : α): ‖A (a₁ - a₂)‖ =‖A (a₂ - a₁)‖ := by
+      (A : α →L[ℝ] β) (a₁ a₂ : α) : ‖A (a₁ - a₂)‖ =‖A (a₂ - a₁)‖ := by
    rw [map_sub, map_sub , ←neg_sub (A a₂) (A a₁)]; apply norm_neg
 
 
 /-Derivatives of quadratic forms-/
-lemma Gradient_of_quadratic_forms { α β : Type*}
-      [NormedAddCommGroup α]  [NormedAddCommGroup β]
+lemma Gradient_of_quadratic_forms {α β : Type*}
+      [NormedAddCommGroup α] [NormedAddCommGroup β]
       [InnerProductSpace ℝ α] [InnerProductSpace ℝ β]
-      [CompleteSpace α]  [CompleteSpace β] (A : α →L[ℝ] β):
+      [CompleteSpace α] [CompleteSpace β] (A : α →L[ℝ] β) :
       ∀ s , HasGradientAt ((fun x => ⟪ A x , A x⟫)) ((2 : ℝ ) • (A†) (A s)) s:= by
    intro s
    rw[HasGradient_iff_Convergence_Point]
    intro ε εpos
-   rcases (le_iff_eq_or_lt.1 $ norm_nonneg A) with h | h
+   rcases (le_iff_eq_or_lt.1 <| norm_nonneg A) with h | h
    ·  use ε,εpos
       intro x hx
       symm at h
@@ -325,13 +364,13 @@ lemma Gradient_of_quadratic_forms { α β : Type*}
       intro x hx
       let t := x - s
       have t1 : s + t = x := by
-         show s + (x - s) = x
+         change s + (x - s) = x
          simp only [add_sub_cancel]
       have : ⟪A x, A x⟫ - ⟪A s, A s⟫ - ⟪(2 : ℝ) • (A†) (A s), x - s⟫ =
             ⟪A (x - s) , A (x - s)⟫ := by
          rw[← t1]
          simp only [map_add, add_sub_cancel_left]
-         show ⟪A s + A t , A s + A t⟫ - ⟪A s, A s⟫ - ⟪(2 : ℝ) • (A†) (A s), t⟫ =
+         change ⟪A s + A t , A s + A t⟫ - ⟪A s, A s⟫ - ⟪(2 : ℝ) • (A†) (A s), t⟫ =
             ⟪A t , A t⟫
          rw[real_inner_add_add_self]
          rw[real_inner_smul_left,ContinuousLinearMap.adjoint_inner_left]
@@ -348,7 +387,7 @@ lemma Gradient_of_quadratic_forms { α β : Type*}
             simp[h , norm_nonneg (s - x)]
          _ = ‖A‖ ^ 2 * ‖s - x‖ ^ 2 := by
             linarith
-      rcases (le_iff_eq_or_lt.1 $ norm_nonneg (s - x)) with h1 | _
+      rcases (le_iff_eq_or_lt.1 <| norm_nonneg (s - x)) with h1 | _
       ·  rw[← h1]
          simp only [ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow, mul_zero, le_refl]
       ·  calc
@@ -362,7 +401,7 @@ lemma Gradient_of_quadratic_forms { α β : Type*}
             _ = _ := by
                field_simp
 
-lemma ADMM_iter_process₁'_eq3_3' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₁'_eq3_3' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       HasGradientAt (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2)
       (ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))) (x₁ n) := by
    intro n
@@ -372,7 +411,7 @@ lemma ADMM_iter_process₁'_eq3_3' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : 
       ext x
       rw[← add_sub]
    rw[← add_sub (A₁ (x₁ n))  (A₂ (x₂ n.natPred))  b ,h1]
-   show HasGradientAt (fun x => ρ / 2 * ‖(A₁ x) + c‖ ^ 2) (ρ • (A₁† (A₁ (x₁ n) + c))) (x₁ n)
+   change HasGradientAt (fun x => ρ / 2 * ‖(A₁ x) + c‖ ^ 2) (ρ • (A₁† (A₁ (x₁ n) + c))) (x₁ n)
    have h2 : (fun x => ρ / 2 * ‖(A₁ x) + c‖ ^ 2) =
          (fun x => ρ / 2 * (⟪(A₁ x) , (A₁ x)⟫ + 2 * ⟪c , A₁ x⟫ + ⟪c , c⟫)):= by
       ext x
@@ -396,36 +435,43 @@ lemma ADMM_iter_process₁'_eq3_3' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : 
    apply HasGradientAt.add
    ·  apply Gradient_of_quadratic_forms
    ·  let a := (fun x => ⟪c, A₁ x⟫)
-      show HasGradientAt (fun x ↦ 2 * a x) ((2 : ℝ)• (A₁† c)) (x₁ n)
+      change HasGradientAt (fun x ↦ 2 * a x) ((2 : ℝ)• (A₁† c)) (x₁ n)
       apply HasGradientAt.const_mul' 2
       apply inner_gradient
 
 -- ⟪a+b,a+b⟫=⟪a,a⟫+2*⟪a,b⟫+⟪b,b⟫
 
-lemma ADMM_iter_process₁'_eq3_3 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      SubderivAt (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2) (x₁ n) = {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))} := by
+lemma ADMM_iter_process₁'_eq3_3 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      SubderivAt (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2) (x₁ n) =
+        {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))} := by
    intro n
    apply SubderivAt_eq_gradient (norm_covex1 n)
    apply ADMM_iter_process₁'_eq3_3'
 
-lemma ADMM_iter_process₁'_eq2_1' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      (fun x => (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x , x₂ n.natPred , y n.natPred)) =
-      (fun x => (f₁ x) + (f₂ (x₂ n.natPred))+ ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫ + ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2) := by
+lemma ADMM_iter_process₁'_eq2_1' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      (fun x => (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+        (x , x₂ n.natPred , y n.natPred)) =
+      (fun x => (f₁ x) + (f₂ (x₂ n.natPred))+ ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫
+        + ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2) := by
    intro n
    rfl
 
 -- (fun x => f x) + (fun x => g x) = (fun x => f x + g x)
-lemma ADMM_iter_process₁'_eq2_1'_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      (fun x => (f₁ x) + (f₂ (x₂ n.natPred))+ ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫ + ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2)
-      = f₁ + (fun _ => f₂ (x₂ n.natPred)) + (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) + (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2)
+lemma ADMM_iter_process₁'_eq2_1'_1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      (fun x => (f₁ x) + (f₂ (x₂ n.natPred))+ ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫
+        + ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2)
+      = f₁ + (fun _ => f₂ (x₂ n.natPred))
+        + (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫)
+        + (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2)
       := by
    intro n
    congr
 
 --(@continuousOn_const E₁ ℝ _ _ univ (f₂ (x₂ n.natPred)) )
 
-lemma ADMM_iter_process₁'_eq2_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x , x₂ n.natPred , y n.natPred)) (x₁ n) =
+lemma ADMM_iter_process₁'_eq2_1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+        (x , x₂ n.natPred , y n.natPred)) (x₁ n) =
       SubderivAt f₁ (x₁ n) + SubderivAt (fun _ => f₂ (x₂ n.natPred)) (x₁ n) +
       SubderivAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) (x₁ n) +
       SubderivAt (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2) (x₁ n) := by
@@ -434,43 +480,54 @@ lemma ADMM_iter_process₁'_eq2_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : �
    rw[SubderivAt.add admm.cf₁ (convexOn_const (f₂ (x₂ n.natPred)) (convex_univ))
    f₁_continuous (x₁ n)]
    rw[SubderivAt.add (ConvexOn.add admm.cf₁ (convexOn_const (f₂ (x₂ n.natPred)) (convex_univ)))
-   (inner_convex1 n) (ContinuousOn.add f₁_continuous (@continuousOn_const E₁ ℝ _ _ univ (f₂ (x₂ n.natPred)))) (x₁ n)]
-   rw[SubderivAt.add (ConvexOn.add (ConvexOn.add admm.cf₁ (convexOn_const (f₂ (x₂ n.natPred)) (convex_univ))) (inner_convex1 n))
-   (norm_covex1 n) (ContinuousOn.add (ContinuousOn.add f₁_continuous (@continuousOn_const E₁ ℝ _ _ univ (f₂ (x₂ n.natPred)))) (inner_continuous1 n)) (x₁ n)]
+   (inner_convex1 n) (ContinuousOn.add f₁_continuous
+     (@continuousOn_const E₁ ℝ _ _ univ (f₂ (x₂ n.natPred)))) (x₁ n)]
+   rw[SubderivAt.add (ConvexOn.add (ConvexOn.add admm.cf₁
+     (convexOn_const (f₂ (x₂ n.natPred)) (convex_univ))) (inner_convex1 n))
+   (norm_covex1 n) (ContinuousOn.add (ContinuousOn.add f₁_continuous
+     (@continuousOn_const E₁ ℝ _ _ univ (f₂ (x₂ n.natPred))))
+     (inner_continuous1 n)) (x₁ n)]
 
-lemma ADMM_iter_process₁'_eq2_2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₁'_eq2_2 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       SubderivAt f₁ (x₁ n) + SubderivAt (fun _ => f₂ (x₂ n.natPred)) (x₁ n) +
       SubderivAt (fun x => ⟪y n.natPred , (A₁ x) + (A₂ (x₂ n.natPred)) - b⟫) (x₁ n) +
       SubderivAt (fun x => ρ / 2 * ‖(A₁ x) + (A₂ (x₂ n.natPred)) - b‖ ^ 2) (x₁ n) =
-      SubderivAt f₁ (x₁ n) + 0 + { A₁† (y n.natPred)} + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}:= by
+      SubderivAt f₁ (x₁ n) + 0 + { A₁† (y n.natPred)}
+        + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}:= by
    intro n
    rw[ADMM_iter_process₁'_eq3_1 n,ADMM_iter_process₁'_eq3_2 n,ADMM_iter_process₁'_eq3_3 n]
 
-lemma ADMM_iter_process₁'_eq2_3 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      SubderivAt f₁ (x₁ n) + 0 + { A₁† (y n.natPred)} + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}
-      = SubderivAt f₁ (x₁ n) + { A₁† (y n.natPred)} + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}:= by
+lemma ADMM_iter_process₁'_eq2_3 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      SubderivAt f₁ (x₁ n) + 0 + { A₁† (y n.natPred)}
+        + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}
+      = SubderivAt f₁ (x₁ n) + { A₁† (y n.natPred)}
+        + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}:= by
    intro n
    rw[add_zero]
 
-lemma ADMM_iter_process₁'_eq1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₁'_eq1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       SubderivAt f₁ (x₁ n) + { A₁† (y n.natPred)} + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}
-      = SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x , x₂ n.natPred , y n.natPred)) (x₁ n):=by
+      = SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+        (x , x₂ n.natPred , y n.natPred)) (x₁ n):=by
    intro n
    rw[← ADMM_iter_process₁'_eq2_3 n,← ADMM_iter_process₁'_eq2_2 n,← ADMM_iter_process₁'_eq2_1 n]
 
 
-lemma ADMM_iter_process₁' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,0 ∈
-      SubderivAt f₁ (x₁ n) + { A₁† (y n.natPred)} + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}:= by
+lemma ADMM_iter_process₁' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,0 ∈
+      SubderivAt f₁ (x₁ n) + { A₁† (y n.natPred)}
+        + {ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ n.natPred) - b))}:= by
    intro n
-   have := first_order_convex_iff_subgradient (f := (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x , x₂ n.natPred , y n.natPred)) ) (x₁ n)
+   have := first_order_convex_iff_subgradient
+     (f := (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+       (x , x₂ n.natPred , y n.natPred)) ) (x₁ n)
    have h := admm.itex₁ n.natPred
    have eq : n.natPred + 1 = n := by apply PNat.natPred_add_one
    rw[eq , this , ← ADMM_iter_process₁'_eq1 n] at h
    exact h
 
 -- 0 ∈ s +{a} => -a ∈ s
-lemma set_add_assoc {E : Type*}[NormedAddCommGroup E]
-      (p q r : Set E): p + q + r = p + (q + r) := by
+lemma set_add_assoc {E : Type*} [NormedAddCommGroup E]
+      (p q r : Set E) : p + q + r = p + (q + r) := by
    rw[superset_antisymm_iff]
    constructor
    ·  intro x hx
@@ -494,25 +551,26 @@ lemma set_add_assoc {E : Type*}[NormedAddCommGroup E]
       rw[← h1,← h2]
       exact Eq.symm (add_assoc qy rz py)
 
-lemma zero_in_add {E : Type*}[NormedAddCommGroup E]{a : E}{s : Set E}
+lemma zero_in_add {E : Type*} [NormedAddCommGroup E] {a : E} {s : Set E}
    (h : 0 ∈ s + {a}) : -a ∈ s:= by
    simp only [add_singleton, image_add_right, mem_preimage, zero_add] at h
    exact h;
 
-lemma change_item {α : Type*}[NormedAddCommGroup α]{S : Set α}{p q : α}(h : 0 ∈ S + {p} + {q}):
+lemma change_item {α : Type*} [NormedAddCommGroup α] {S : Set α} {p q : α} (h : 0 ∈ S + {p} + {q}) :
       - p - q ∈ S := by
    rw[set_add_assoc S {p} {q},Set.singleton_add_singleton] at h
    apply zero_in_add at h
    rwa[← neg_add' p q]
 
 
-lemma ADMM_iter_process₁ [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      ( - A₁† (y (n - 1)) - ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ (n - 1)) - b))) ∈ SubderivAt f₁ (x₁ n) := by
+lemma ADMM_iter_process₁ [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      ( - A₁† (y (n - 1)) - ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ (n - 1)) - b)))
+        ∈ SubderivAt f₁ (x₁ n) := by
    intro n
    let S := SubderivAt f₁ (x₁ n)
    let p := A₁† (y (n - 1))
    let q := ρ • (A₁† (A₁ (x₁ n) + A₂ (x₂ (n - 1)) - b))
-   show - p - q ∈ S
+   change - p - q ∈ S
    have := ADMM_iter_process₁' n
    change 0 ∈ S + {p} + {q} at this
    apply change_item this
@@ -522,13 +580,13 @@ lemma ADMM_iter_process₂'_eq3_1' [Setting E₁ E₂ F admm admm_kkt] : ∀ n :
    intro n
    apply hasGradientAt_const
 
-lemma ADMM_iter_process₂'_eq3_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₂'_eq3_1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       SubderivAt (fun _ => f₁ (x₁ n)) (x₂ n) = 0 := by
    intro n
    apply SubderivAt_eq_gradient (convexOn_const (f₁ (x₁ n)) (convex_univ))
    apply ADMM_iter_process₂'_eq3_1'
 
-lemma ADMM_iter_process₂'_eq3_2' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , ∀ x ,
+lemma ADMM_iter_process₂'_eq3_2' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ , ∀ x ,
       HasGradientAt (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) (A₂† (y n.natPred)) x := by
    intro n x
    let c := y n.natPred
@@ -541,28 +599,30 @@ lemma ADMM_iter_process₂'_eq3_2' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : 
       rw[← add_sub (A₂ x) (A₁ (x₁ n))  b]
       exact inner_add_right (y n.natPred) (A₂ x) (A₁ (x₁ n) - b)
    rw[this]
-   show HasGradientAt (fun x => ⟪c , (A₂ x)⟫ + c₁) (A₂† c) x
+   change HasGradientAt (fun x => ⟪c , (A₂ x)⟫ + c₁) (A₂† c) x
    rw[hasGradientAt_iff_hasFDerivAt]
    apply HasFDerivAt.add_const c₁
-   show HasGradientAt ((fun x => ⟪c , (A₂ x)⟫)) (A₂† c) x
+   change HasGradientAt ((fun x => ⟪c , (A₂ x)⟫)) (A₂† c) x
    apply inner_gradient
 
-lemma inner_continuous2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
+lemma inner_continuous2 [Setting E₁ E₂ F admm admm_kkt] :∀ n : ℕ+ ,
       ContinuousOn (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) univ:= by
    intro n
-   have :∀ x ∈ univ,HasGradientAt (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) (A₂† (y n.natPred)) x := by
+   have :∀ x ∈ univ,
+     HasGradientAt (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) (A₂† (y n.natPred)) x := by
       intro x _
       apply ADMM_iter_process₂'_eq3_2' n
    apply HasGradientAt.continuousOn
    exact this
 
-lemma ADMM_iter_process₂'_eq3_2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      SubderivAt (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) (x₂ n) = { A₂† (y n.natPred)} := by
+lemma ADMM_iter_process₂'_eq3_2 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      SubderivAt (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫)
+        (x₂ n) = { A₂† (y n.natPred)} := by
    intro n
    apply SubderivAt_eq_gradient (inner_convex2 n)
    apply ADMM_iter_process₂'_eq3_2'
 
-lemma ADMM_iter_process₂'_eq3_3' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₂'_eq3_3' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       HasGradientAt (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2)
       (ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) - b))) (x₂ n) := by
    intro n
@@ -576,7 +636,7 @@ lemma ADMM_iter_process₂'_eq3_3' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : 
          (ρ • (A₂† (A₂ (x₂ n) + (A₁ (x₁ n) - b)))):= by
       rw[add_comm,← add_sub]
    rw[h1']
-   show HasGradientAt (fun x => ρ / 2 * ‖(A₂ x) + c‖ ^ 2) (ρ • (A₂† (A₂ (x₂ n) + c))) (x₂ n)
+   change HasGradientAt (fun x => ρ / 2 * ‖(A₂ x) + c‖ ^ 2) (ρ • (A₂† (A₂ (x₂ n) + c))) (x₂ n)
    have h2 : (fun x => ρ / 2 * ‖(A₂ x) + c‖ ^ 2) =
          (fun x => ρ / 2 * (⟪(A₂ x) , (A₂ x)⟫ + 2 * ⟪c , A₂ x⟫ + ⟪c , c⟫)):= by
       ext x
@@ -600,30 +660,36 @@ lemma ADMM_iter_process₂'_eq3_3' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : 
    apply HasGradientAt.add
    ·  apply Gradient_of_quadratic_forms
    ·  let a := (fun x => ⟪c, A₂ x⟫)
-      show HasGradientAt (fun x ↦ 2 * a x) ((2 : ℝ)• (A₂† c)) (x₂ n)
+      change HasGradientAt (fun x ↦ 2 * a x) ((2 : ℝ)• (A₂† c)) (x₂ n)
       apply HasGradientAt.const_mul' 2
       apply inner_gradient
 
-lemma ADMM_iter_process₂'_eq3_3 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      SubderivAt (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2) (x₂ n) = {ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) - b))} := by
+lemma ADMM_iter_process₂'_eq3_3 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      SubderivAt (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2) (x₂ n) =
+        {ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) - b))} := by
    intro n
    apply SubderivAt_eq_gradient (norm_covex2 n)
    apply ADMM_iter_process₂'_eq3_3'
 
-lemma ADMM_iter_process₂'_eq2_1' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x₁ n , x , y n.natPred))=
-      (fun x => f₁ (x₁ n) + (f₂ x)+ ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫ + ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2) := by
+lemma ADMM_iter_process₂'_eq2_1' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+        (x₁ n , x , y n.natPred))=
+      (fun x => f₁ (x₁ n) + (f₂ x)+ ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫
+        + ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2) := by
    intro n
    rfl
 
-lemma ADMM_iter_process₂'_eq2_1'_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      (fun x => f₁ (x₁ n) + (f₂ x)+ ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫ + ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2)
-      = (fun _ => f₁ (x₁ n)) + f₂ + (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) + (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2):= by
+lemma ADMM_iter_process₂'_eq2_1'_1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      (fun x => f₁ (x₁ n) + (f₂ x)+ ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫
+        + ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2)
+      = (fun _ => f₁ (x₁ n)) + f₂ + (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫)
+        + (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2):= by
    intro n
    congr
 
-lemma ADMM_iter_process₂'_eq2_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
-      SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x₁ n , x , y n.natPred)) (x₂ n) =
+lemma ADMM_iter_process₂'_eq2_1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
+      SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+        (x₁ n , x , y n.natPred)) (x₂ n) =
       SubderivAt (fun _ => f₁ (x₁ n)) (x₂ n) + SubderivAt f₂ (x₂ n) +
       SubderivAt (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) (x₂ n) +
       SubderivAt (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2) (x₂ n):= by
@@ -632,12 +698,15 @@ lemma ADMM_iter_process₂'_eq2_1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : �
    rw[SubderivAt.add (convexOn_const (f₁ (x₁ n)) (convex_univ)) admm.cf₂
    (@continuousOn_const E₂ ℝ _ _ univ (f₁ (x₁ n))) (x₂ n)]
    rw[SubderivAt.add (ConvexOn.add (convexOn_const (f₁ (x₁ n)) (convex_univ)) admm.cf₂)
-   (inner_convex2 n) (ContinuousOn.add (@continuousOn_const E₂ ℝ _ _ univ (f₁ (x₁ n)))  f₂_continuous) (x₂ n)]
-   rw[SubderivAt.add (ConvexOn.add (ConvexOn.add (convexOn_const (f₁ (x₁ n)) (convex_univ)) admm.cf₂) (inner_convex2 n))
-   (norm_covex2 n) (ContinuousOn.add (ContinuousOn.add (@continuousOn_const E₂ ℝ _ _ univ (f₁ (x₁ n)))  f₂_continuous) (inner_continuous2 n)) (x₂ n)]
+   (inner_convex2 n) (ContinuousOn.add
+     (@continuousOn_const E₂ ℝ _ _ univ (f₁ (x₁ n)))  f₂_continuous) (x₂ n)]
+   rw[SubderivAt.add (ConvexOn.add (ConvexOn.add
+     (convexOn_const (f₁ (x₁ n)) (convex_univ)) admm.cf₂) (inner_convex2 n))
+   (norm_covex2 n) (ContinuousOn.add (ContinuousOn.add
+     (@continuousOn_const E₂ ℝ _ _ univ (f₁ (x₁ n)))  f₂_continuous) (inner_continuous2 n)) (x₂ n)]
 
 -- #check
-lemma ADMM_iter_process₂'_eq2_2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₂'_eq2_2 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       SubderivAt (fun _ => f₁ (x₁ n)) (x₂ n) + SubderivAt f₂ (x₂ n) +
       SubderivAt (fun x => ⟪y n.natPred , (A₁ (x₁ n)) + (A₂ x) - b⟫) (x₂ n) +
       SubderivAt (fun x => ρ / 2 * ‖(A₁ (x₁ n)) + (A₂ x) - b‖ ^ 2) (x₂ n) =
@@ -645,39 +714,43 @@ lemma ADMM_iter_process₂'_eq2_2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : �
    intro n
    rw[ADMM_iter_process₂'_eq3_1 n,ADMM_iter_process₂'_eq3_2 n,ADMM_iter_process₂'_eq3_3 n]
 
-lemma ADMM_iter_process₂'_eq2_3 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₂'_eq2_3 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       0 + SubderivAt f₂ (x₂ n) + { A₂† (y n.natPred)} + {ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) - b))}
       = SubderivAt f₂ (x₂ n) + { A₂† (y n.natPred)} + {ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) - b))}:= by
    intro n
    rw[zero_add]
 
-lemma ADMM_iter_process₂'_eq1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₂'_eq1 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       SubderivAt f₂ (x₂ n) + { A₂† (y n.natPred)} + {ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) - b))}
-      = SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x₁ n , x , y n.natPred)) (x₂ n):=by
+      = SubderivAt (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+        (x₁ n , x , y n.natPred)) (x₂ n):=by
    intro n
    rw[← ADMM_iter_process₂'_eq2_3 n,← ADMM_iter_process₂'_eq2_2 n , ← ADMM_iter_process₂'_eq2_1 n]
 
-lemma ADMM_iter_process₂' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , 0 ∈
+lemma ADMM_iter_process₂' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ , 0 ∈
       SubderivAt f₂ (x₂ n) + { A₂† (y (n - 1))} + {ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) - b))}:= by
    intro n
-   have := first_order_convex_iff_subgradient (f := (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ) (x₁ n , x , y n.natPred))) (x₂ n)
+   have := first_order_convex_iff_subgradient
+     (f := (fun x ↦ (Augmented_Lagrangian_Function E₁ E₂ F admm.toOptProblem ρ)
+       (x₁ n , x , y n.natPred))) (x₂ n)
    have h := admm.itex₂ n.natPred
    have eq : n.natPred + 1 = n := by apply PNat.natPred_add_one
    rw[eq , this , ← ADMM_iter_process₂'_eq1 n] at h
    exact h
 
-lemma ADMM_iter_process₂ [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma ADMM_iter_process₂ [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       (- A₂† (y (n - 1))- ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) -b))) ∈ SubderivAt f₂ (x₂ n) := by
    intro n
    let S := SubderivAt f₂ (x₂ n)
    let p := A₂† (y (n - 1))
    let q := ρ • (A₂† (A₁ (x₁ n) + A₂ (x₂ n) -b))
-   show - p - q ∈ S
+   change - p - q ∈ S
    have := ADMM_iter_process₂' n
    change 0 ∈ S + {p} + {q} at this
    apply change_item this
 
-lemma u_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , u n ∈ SubderivAt f₁ (x₁ n) := by
+lemma u_inthesubgradient [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n : ℕ+ , u n ∈ SubderivAt f₁ (x₁ n) := by
   intro n
   have : (↑n : Nat) - 1 + 1 = (↑n : Nat) := PNat.natPred_add_one n
   let un := u n
@@ -694,19 +767,23 @@ lemma u_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , u n
          _ = -A₁† (yn' + ρ • (A₁ x₁n + A₂ x₂n' -b)) := by
             rw [← A₁†.map_smul, A₁†.map_add, neg_add']
          _ = -A₁† (yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₁ x₁n + A₂ x₂n' -b)) := by rw [aux]
-         _ = -A₁† (yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₁ x₁n + A₂ x₂n + A₂ x₂n' - A₂ x₂n -b)) := by
+         _ = -A₁† (yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b)
+           + ρ • (A₁ x₁n + A₂ x₂n + A₂ x₂n' - A₂ x₂n -b)) := by
             congr
             rw [add_assoc, add_comm (A₂ x₂n), ← add_assoc]
             exact Eq.symm (add_sub_cancel_right (A₁ x₁n + A₂ x₂n') (A₂ x₂n))
-         _ = -A₁† (yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₂ x₂n' - A₂ x₂n)) := by
-            have :  ρ • (A₁ x₁n + A₂ x₂n + A₂ x₂n' - A₂ x₂n - b) = ρ • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₂ x₂n' - A₂ x₂n) := by
+         _ = -A₁† (yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₁ x₁n + A₂ x₂n - b)
+           + ρ • (A₂ x₂n' - A₂ x₂n)) := by
+            have :  ρ • (A₁ x₁n + A₂ x₂n + A₂ x₂n' - A₂ x₂n - b) =
+              ρ • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₂ x₂n' - A₂ x₂n) := by
                rw [←smul_add]
                refine (smul_right_inj ?hc).mpr ?_
                exact Ne.symm (ne_of_lt admm.hrho)
                rw[←add_sub]
                exact add_sub_right_comm (A₁ x₁n + A₂ x₂n) (A₂ x₂n' - A₂ x₂n) b
             rw [this, add_assoc]
-         _ = -A₁† (yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₁ x₁n + A₂ x₂n -b ) + ρ • A₂ (x₂n' - x₂n)) := by
+         _ = -A₁† (yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b) + ρ • (A₁ x₁n + A₂ x₂n -b )
+           + ρ • A₂ (x₂n' - x₂n)) := by
             have : ρ • (A₂ x₂n' - A₂ x₂n) = ρ • A₂ (x₂n' - x₂n) := by
                refine (smul_right_inj ?hc).mpr ?_
                exact Eq.symm (ContinuousLinearMap.map_sub A₂ x₂n' x₂n)
@@ -718,9 +795,11 @@ lemma u_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , u n
                rw[sub_sub,←add_smul];simp
                rw[sub_mul,add_sub];simp
             rw [this]
-         _ = -A₁† (yn + ((1 - τ) * ρ) • (A₁ x₁n + A₂ x₂n - (A₁ x₁' + A₂ x₂')) + ρ • A₂ (x₂n' - x₂n)) := by
+         _ = -A₁† (yn + ((1 - τ) * ρ) • (A₁ x₁n + A₂ x₂n - (A₁ x₁' + A₂ x₂'))
+           + ρ • A₂ (x₂n' - x₂n)) := by
             rw [(admm_kkt.h).eq]
-         _ = -A₁† (yn + ((1 - τ) * ρ) • ((A₁ x₁n - A₁ x₁') + (A₂ x₂n - A₂ x₂')) + ρ • A₂ (x₂n' - x₂n)) := by
+         _ = -A₁† (yn + ((1 - τ) * ρ) • ((A₁ x₁n - A₁ x₁') + (A₂ x₂n - A₂ x₂'))
+           + ρ • A₂ (x₂n' - x₂n)) := by
             have : A₁ x₁n + A₂ x₂n - (A₁ x₁' + A₂ x₂') = (A₁ x₁n - A₁ x₁') + (A₂ x₂n - A₂ x₂') := by
                exact add_sub_add_comm (A₁ x₁n) (A₂ x₂n) (A₁ x₁') (A₂ x₂')
             rw [this]
@@ -738,7 +817,8 @@ lemma u_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , u n
   rw [← h₁, ← this]
   exact ADMM_iter_process₁ n
 
-lemma v_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , v n ∈ SubderivAt f₂ (x₂ n) := by
+lemma v_inthesubgradient [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n : ℕ+ , v n ∈ SubderivAt f₂ (x₂ n) := by
    intro n
    have : (↑n : Nat) - 1 + 1 = (↑n : Nat) := PNat.natPred_add_one n
    -- notation for v n
@@ -752,7 +832,6 @@ lemma v_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , v n
    let x₁n := x₁ n; let x₂n := x₂ n
    have h₄ : x₁n = admm.x₁ n := rfl
    have h₅ : x₂n = admm.x₂ n := rfl
-
    -- prove : y_n-1 = y_n - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b)
    have aux : yn' = yn - (τ * ρ) • (A₁ x₁n + A₂ x₂n - b) := by
       rw [h₂, ← this, admm.itey (n - 1), ← h₃, this, ← h₄, ← h₅]
@@ -793,7 +872,8 @@ lemma v_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , v n
    rw [← h₁, ← this]
    exact ADMM_iter_process₂ n
 
-lemma Φ_isdescending_eq1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , A₁ (x₁ (n + 1)) + A₂ (x₂ (n + 1)) - b
+lemma Φ_isdescending_eq1 [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n , A₁ (x₁ (n + 1)) + A₂ (x₂ (n + 1)) - b
       = (1 / (τ * ρ)) • (y (n + 1) - y n):= by
    intro n
    rw [admm.itey n,add_comm (y n)]
@@ -806,7 +886,7 @@ lemma Φ_isdescending_eq1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , A₁ (x�
       exact inv_mul_cancel₀ admm.hrho.ne'
    rw [htau1 , one_mul, hrho1, one_smul]
 
-lemma Φ_isdescending_eq2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , (1 / (τ * ρ)) • (y (n + 1) - y n)
+lemma Φ_isdescending_eq2 [Setting E₁ E₂ F admm admm_kkt] : ∀ n , (1 / (τ * ρ)) • (y (n + 1) - y n)
       = (1 / (τ * ρ)) • (ey (n + 1) - ey n):= by
    intro n
    calc
@@ -814,7 +894,8 @@ lemma Φ_isdescending_eq2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , (1 / (τ 
       _ = (1 / (τ * ρ)) • (y (n + 1) - y' - (y n - y')) := by simp only [one_div,
         mul_inv_rev, sub_add_cancel, sub_sub_sub_cancel_right]
 
-lemma Φ_isdescending_eq3 [Setting E₁ E₂ F admm admm_kkt] : ∀ n , A₁ (x₁ (n + 1)) + A₂ (x₂ (n + 1)) - b
+lemma Φ_isdescending_eq3 [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n , A₁ (x₁ (n + 1)) + A₂ (x₂ (n + 1)) - b
       = A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1)) := by
    intro n
    calc
@@ -824,7 +905,8 @@ lemma Φ_isdescending_eq3 [Setting E₁ E₂ F admm admm_kkt] : ∀ n , A₁ (x�
       _ = A₁ ((x₁ (n + 1)) - x₁') + A₂ ((x₂ (n + 1)) - x₂') := by simp only [map_sub]
       _ = A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1)) := by rw [e₁, e₂]
 
-lemma Φ_isdescending_eq3' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ , A₁ (x₁ n) + A₂ (x₂ n) - b = A₁ (e₁ n) + A₂ (e₂ n) := by
+lemma Φ_isdescending_eq3' [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n : ℕ+ , A₁ (x₁ n) + A₂ (x₂ n) - b = A₁ (e₁ n) + A₂ (e₂ n) := by
    intro n
    have := Φ_isdescending_eq3 n.natPred
    have h: n = n.natPred + 1 := by simp only [PNat.natPred_add_one]
@@ -841,7 +923,7 @@ lemma subgradientAt_mono_u [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+,
          apply u_inthesubgradient
          exact admm_kkt.h.subgrad₁
 
-lemma subgradientAt_mono_v [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+,
+lemma subgradientAt_mono_v [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+,
       (0 : ℝ) ≤ (inner ℝ (v (n) + A₂† y') (x₂ (n) - x₂')) := by
    intro n
    calc
@@ -851,7 +933,7 @@ lemma subgradientAt_mono_v [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+,
          apply v_inthesubgradient
          exact admm_kkt.h.subgrad₂
 
-lemma expended_u_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n, (0 : ℝ) ≤
+lemma expended_u_gt_zero [Setting E₁ E₂ F admm admm_kkt] : ∀ n, (0 : ℝ) ≤
       (inner ℝ ( -ey (n + 1) - ((1-τ) * ρ) • (A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1)))
       - (ρ • (A₂ (x₂ (n) - x₂ (n+1))))) (A₁ (e₁ (n + 1)))):= by
    intro n
@@ -867,7 +949,8 @@ lemma expended_u_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n, (0 : ℝ) �
       _= inner (𝕜 := ℝ) block Ae1 := by rfl
       _= inner ℝ (A₁† block) (e') := by rw [ContinuousLinearMap.adjoint_inner_left]
       _= inner ℝ (u' + A₁† y') (x_diff) := by
-         let block₁ := y (n + 1) + ((1-τ) * ρ) • (A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1))) + (ρ • (A₂ (x₂ (n) - x₂ (n+1))))
+         let block₁ := y (n + 1) + ((1-τ) * ρ) • (A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1)))
+           + (ρ • (A₂ (x₂ (n) - x₂ (n+1))))
          have split_block : -block = block₁ - y' := by
             simp[block, block₁]
             have split_ey :  ey (n + 1) = (y (n + 1)) - y' := by rfl
@@ -886,7 +969,8 @@ lemma expended_u_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n, (0 : ℝ) �
          have u'_eq : - A₁† block₁ = u' := by
             simp[u']
             rw [← A₁†.map_smul, ← A₁†.map_smul,smul_sub,← A₁†.map_smul, ← A₁†.map_smul]
-            rw [← A₁†.map_sub,← A₁†.map_neg, ← A₁†.map_neg, ← A₁†.map_neg, ← A₁†.map_neg, ← A₁†.map_neg]
+            rw [← A₁†.map_sub,← A₁†.map_neg, ← A₁†.map_neg, ← A₁†.map_neg, ← A₁†.map_neg,
+              ← A₁†.map_neg]
             rw [← A₁†.map_add, ← A₁†.map_add, ← A₁†.map_add]
             simp[block₁]
             rw [← smul_neg, neg_sub,smul_sub]
@@ -897,7 +981,7 @@ lemma expended_u_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n, (0 : ℝ) �
       _= (inner ℝ (u (succ_n) + A₁† y') (x₁ (succ_n) - x₁')) := by rfl
       _≥ 0 := by apply subgradientAt_mono_u
 
-lemma expended_v_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n,
+lemma expended_v_gt_zero [Setting E₁ E₂ F admm admm_kkt] : ∀ n,
       (inner ℝ ( -ey (n + 1) - ((1 - τ) * ρ) • ((A₁ (e₁ (n + 1))) + (A₂ (e₂ (n + 1)))))
       (A₂ (e₂ (n + 1)))) ≥ (0 : ℝ) := by
    intro n
@@ -910,7 +994,8 @@ lemma expended_v_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n,
    let x_diff := x₂ (succ_n) - x₂'
    calc
    _ = inner ℝ ( -ey'- ((1 - τ) * ρ) • (A₁ e₁' + A₂ e₂')) (A₂ e₂') := by rfl
-   _ = inner ℝ (A₂† (-ey'- ((1 - τ) * ρ) • (A₁ e₁' + A₂ e₂'))) (e₂') := by rw [ContinuousLinearMap.adjoint_inner_left]
+   _ = inner ℝ (A₂† (-ey'- ((1 - τ) * ρ) • (A₁ e₁' + A₂ e₂'))) (e₂') := by
+      rw [ContinuousLinearMap.adjoint_inner_left]
    _ = inner ℝ (-A₂† (ey'+ ((1 - τ) * ρ) • (A₁ e₁' + A₂ e₂'))) (e₂') := by
       rw [sub_eq_add_neg,← neg_add,A₂†.map_neg]
    _ = inner ℝ (-A₂† (y_k_1 - y' + ((1 - τ) * ρ) • (A₁ e₁' + A₂ e₂'))) (e₂') := by
@@ -924,7 +1009,8 @@ lemma expended_v_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n,
 
 lemma starRingEnd_eq_R (x : ℝ) : (starRingEnd ℝ) x = x := rfl
 
-lemma expended_u_v_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n , (inner ℝ (ey (n + 1)) (-(A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1)))))
+lemma expended_u_v_gt_zero [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n , (inner ℝ (ey (n + 1)) (-(A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1)))))
       - (1 - τ) * ρ * ‖A₁ (e₁ (n+1)) + A₂ (e₂ (n+1))‖^2
       + ρ * (inner ℝ (-A₂ (x₂ (n) - x₂ (n + 1))) (A₁ (e₁ (n + 1)))) ≥ 0 := by
    intro n
@@ -954,7 +1040,8 @@ lemma expended_u_v_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n , (inner �
          rw [add_neg_cancel, add_zero]
          rw [← add_smul (τ * ρ - ρ) (-(τ * ρ) + ρ) (A_e_sum)]
          rw [add_comm (-(τ * ρ)) ρ, ← add_assoc]
-         rw [sub_eq_add_neg, add_assoc (τ * ρ) (-ρ) ρ, add_comm (-ρ) ρ, add_neg_cancel, add_zero, add_neg_cancel, zero_smul]
+         rw [sub_eq_add_neg, add_assoc (τ * ρ) (-ρ) ρ, add_comm (-ρ) ρ, add_neg_cancel, add_zero,
+           add_neg_cancel, zero_smul]
       rw [sub]
    _ = inner ℝ (-ey' - ((1 - τ) * ρ) • A_e_sum) (Ae1 + Ae2) + ρ * (inner ℝ A_x_sum Ae1) := by rfl
    _ = inner ℝ (-ey' - ((1 - τ) * ρ) • A_e_sum) Ae1 + inner ℝ (-ey' - ((1 - τ) * ρ) • A_e_sum) Ae2
@@ -965,9 +1052,11 @@ lemma expended_u_v_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n , (inner �
       rw [inner_smul_left A_x_sum Ae1 ρ, starRingEnd_eq_R, add_comm];ring
    _ = (inner ℝ ( -ey (n + 1) - ((1 - τ) * ρ) • ((A₁ (e₁ (n + 1))) + (A₂ (e₂ (n + 1)))))
        (A₂ (e₂ (n + 1)))) +
-       (inner ℝ ( -ey (n + 1) - ((1-τ) * ρ) • (A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1))) - (ρ • (A₂ (x₂ (n) - x₂ (n+1)))))
+       (inner ℝ ( -ey (n + 1) - ((1-τ) * ρ) • (A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1)))
+         - (ρ • (A₂ (x₂ (n) - x₂ (n+1)))))
        (A₁ (e₁ (n + 1)))) := by
-         have sub : ρ • (A₂ (x₂ (n + 1)) - A₂ (x₂ (n))) = -1 • ρ • (A₂ (x₂ (n)) - A₂ (x₂ (n + 1))) := by
+         have sub : ρ • (A₂ (x₂ (n + 1)) - A₂ (x₂ (n))) =
+           -1 • ρ • (A₂ (x₂ (n)) - A₂ (x₂ (n + 1))) := by
             rw [smul_comm,neg_one_smul,neg_sub]
          simp[ey', A_e_sum, Ae2, A_x_sum, Ae1]
          nth_rw 5 [sub_eq_add_neg]
@@ -978,7 +1067,9 @@ lemma expended_u_v_gt_zero [Setting E₁ E₂ F admm admm_kkt]: ∀ n , (inner �
       apply expended_v_gt_zero
       apply expended_u_gt_zero
 
-lemma substitution1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , - ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) ) = ρ * (inner ℝ (A₂ (x₂ n - x₂ (n+1))) (A₂ (e₂ (n+1))) ) := by
+lemma substitution1 [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n , - ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) )
+      = ρ * (inner ℝ (A₂ (x₂ n - x₂ (n+1))) (A₂ (e₂ (n+1))) ) := by
    intro n
    rw [neg_mul (ρ) (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))))]
    rw [← mul_neg]
@@ -986,12 +1077,14 @@ lemma substitution1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , - ρ * (inner �
    rw [← map_neg A₂ (x₂ (n+1) - x₂ n)]
    rw [neg_sub (x₂ (n+1)) (x₂ n)]
 
-lemma substitution2 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b - A₂ (e₂ (n+1)) = A₁ (e₁ (n+1)) := by
+lemma substitution2 [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n , A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b - A₂ (e₂ (n+1)) = A₁ (e₁ (n+1)) := by
    intro n
    have h := Φ_isdescending_eq3 n
    simp [h]
 
-lemma Φ_isdescending_inequ1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , 1/(τ * ρ) * (inner ℝ (ey (n+1)) ((ey n)-(ey (n+1))))
+lemma Φ_isdescending_inequ1 [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n , 1/(τ * ρ) * (inner ℝ (ey (n+1)) ((ey n)-(ey (n+1))))
       - (1-τ)*ρ*‖admm.A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))
       -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) ) ≥ 0 := by
@@ -1011,9 +1104,11 @@ lemma Φ_isdescending_inequ1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , 1/(τ 
             rw [← Φ_isdescending_eq2, ← Φ_isdescending_eq1]
          _ = (inner ℝ (ey (n+1)) (-(A₁ (e₁ (n+1)) + A₂ (e₂ (n+1))))) := by
             rw [Φ_isdescending_eq3]
-   have h2:  pm2*‖admm.A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2 = pm2*‖admm.A₁ (e₁ (n+1)) + A₂ (e₂ (n+1))‖^2 := by
+   have h2:  pm2*‖admm.A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
+     = pm2*‖admm.A₁ (e₁ (n+1)) + A₂ (e₂ (n+1))‖^2 := by
       rw [Φ_isdescending_eq3]
-   have h3: ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)) -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) )
+   have h3: ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))
+     -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) )
    =  ρ * (inner ℝ (-A₂ (x₂ (n) - x₂ (n + 1))) (A₁ (e₁ (n+1)))) := by
       calc ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))
          -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) )
@@ -1032,10 +1127,13 @@ lemma Φ_isdescending_inequ1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , 1/(τ 
          _ = ρ * (inner ℝ (A₂ (x₂ n - x₂ (n+1))) (A₂ (e₂ (n+1))) )
          - ρ * (inner ℝ (A₂ (x₂ (n) - x₂ (n+1))) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)) := by
             ring
-         _ = ρ * (inner ℝ (A₂ (x₂ (n) - x₂ (n+1))) (A₂ (e₂ (n+1)) - (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))):= by
+         _ = ρ * (inner ℝ (A₂ (x₂ (n) - x₂ (n+1)))
+           (A₂ (e₂ (n+1)) - (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))):= by
             rw [← mul_sub]
-            rw [← inner_sub_right (A₂ (x₂ (n) - x₂ (n+1))) (A₂ (e₂ (n+1))) ((A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))]
-         _ = - ρ * (inner ℝ (A₂ (x₂ (n) - x₂ (n+1))) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b - A₂ (e₂ (n+1)))) := by
+            rw [← inner_sub_right (A₂ (x₂ (n) - x₂ (n+1))) (A₂ (e₂ (n+1)))
+              ((A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))]
+         _ = - ρ * (inner ℝ (A₂ (x₂ (n) - x₂ (n+1)))
+           (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b - A₂ (e₂ (n+1)))) := by
             rw [← neg_sub (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b) (A₂ (e₂ (n+1)))]
             rw [inner_neg_right]
             simp only [map_sub, mul_neg, neg_mul]
@@ -1048,20 +1146,24 @@ lemma Φ_isdescending_inequ1 [Setting E₁ E₂ F admm admm_kkt]: ∀ n , 1/(τ 
    rw [h1,h2]
    have h4: (inner ℝ (ey (n + 1)) (-((A₁ (e₁ (n + 1))) + A₂ (e₂ (n + 1)))))
    - pm2*‖admm.A₁ (e₁ (n+1)) + A₂ (e₂ (n+1))‖^2 +
-   (ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)) -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) )) = (inner ℝ (ey (n + 1)) (-((A₁ (e₁ (n + 1))) + A₂ (e₂ (n + 1)))))
+   (ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))
+     -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) ))
+     = (inner ℝ (ey (n + 1)) (-((A₁ (e₁ (n + 1))) + A₂ (e₂ (n + 1)))))
    - pm2*‖admm.A₁ (e₁ (n+1)) + A₂ (e₂ (n+1))‖^2 +
-   ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)) -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) ) := by ring
+   ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b))
+     -ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))) ) := by ring
    rw [← h4,h3]
    exact expended_u_v_gt_zero n
 
-lemma A'υ_inthesubgradient [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , - (A₂†) (υ n) ∈ SubderivAt f₂ (x₂ n):= by
+lemma A'υ_inthesubgradient [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n : ℕ+ , - (A₂†) (υ n) ∈ SubderivAt f₂ (x₂ n):= by
    intro n
    rw [υ]
    have : v n = - A₂† (y n + (( 1 - τ) * ρ )•(A₁ (e₁ n) + A₂ (e₂ n))):= rfl
    rw[Φ_isdescending_eq3' , ← this]
    apply v_inthesubgradient
 
-lemma Φ_isdescending_inequ2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
+lemma Φ_isdescending_inequ2 [Setting E₁ E₂ F admm admm_kkt] :∀ n : ℕ+ ,
       inner ℝ ( - ( A₂† ( υ (n+1) - υ n ))) ((x₂ (n+1)) - (x₂ n)) ≥ ( 0 : ℝ ) := by
    intro n
    let A₂T := A₂†
@@ -1074,11 +1176,12 @@ lemma Φ_isdescending_inequ2 [Setting E₁ E₂ F admm admm_kkt]:∀ n : ℕ+ ,
       calc
          -(A₂T ((υ (n+1)) - (υ n))) = - (A₂T (υ (n+1)) - A₂T (υ n)) := by continuity
          _=  (A₂T ((υ) n)) - (A₂T ((υ) (n+1))) := by simp
-         _= - (A₂T ((υ) (n+1))) - (-(A₂T ((υ) n))) := by rw [sub_neg_eq_add,add_comm (- (A₂T ((υ) (n+1)))),sub_eq_add_neg]
+         _= - (A₂T ((υ) (n+1))) - (-(A₂T ((υ) n))) := by
+            rw [sub_neg_eq_add,add_comm (- (A₂T ((υ) (n+1)))),sub_eq_add_neg]
          _= A₂υn1 - A₂υn := by rfl
    rwa [h]
 
-lemma Φ_isdescending_inequ3 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
+lemma Φ_isdescending_inequ3 [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+ ,
       ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)) ≤ M (n+1) := by
    intro n
    let A₂_x_diff := A₂ (x₂ (n+1) - x₂ n)
@@ -1147,7 +1250,8 @@ lemma Φ_isdescending_inequ3 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ ,
       apply Φ_isdescending_inequ2
    linarith
 
-lemma Φ_isdescending_inequ4 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+, 1 / (τ * ρ) * (inner ℝ (ey (n + 1)) ((ey n) - (ey (n + 1))))
+lemma Φ_isdescending_inequ4 [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n : ℕ+, 1 / (τ * ρ) * (inner ℝ (ey (n + 1)) ((ey n) - (ey (n + 1))))
       - (1 - τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2 + M (n + 1)
       - ρ * (inner ℝ (A₂ (x₂ (n + 1) - x₂ n)) (A₂ (e₂ (n+1))) ) ≥ 0:= by
    intro n
@@ -1166,7 +1270,7 @@ lemma inner_eq_norm {X : Type*} [NormedAddCommGroup X] [InnerProductSpace ℝ X]
    rw [norm_sub_sq (𝕜 := ℝ) a₁ a₂];ring_nf;
    rfl
 
-lemma Φ_isdescending_eq2' [Setting E₁ E₂ F admm admm_kkt]:
+lemma Φ_isdescending_eq2' [Setting E₁ E₂ F admm admm_kkt] :
       ∀ n , (τ * ρ) • (A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b) = ey (n+1) - ey n:=by
    intro n
    rw [Φ_isdescending_eq1, Φ_isdescending_eq2]
@@ -1178,7 +1282,7 @@ lemma Φ_isdescending_eq2' [Setting E₁ E₂ F admm admm_kkt]:
    apply ne_of_gt h₁
    apply ne_of_gt admm.hrho
 
-lemma Φ_isdescending_inequ5' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+,
+lemma Φ_isdescending_inequ5' [Setting E₁ E₂ F admm admm_kkt] : ∀ n : ℕ+,
       1 / (τ * ρ) * (‖ey n‖^2 - ‖ey (n+1)‖^2) - (2 - τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + 2 * (M (n+1)) - ρ * ‖A₂ (x₂ (n+1) - x₂ n)‖^2 - ρ * ‖A₂ (e₂ (n+1))‖^2 + ρ * ‖A₂ (e₂ n)‖ ^ 2
       = 2 * (1 / (τ * ρ) * (inner ℝ (ey (n+1)) ((ey n)-(ey (n+1)))) -
@@ -1186,9 +1290,11 @@ lemma Φ_isdescending_inequ5' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+,
       + M (n+1) - ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1))))) := by
    intro n
    have h₄'' : ‖A₂ (x₂') - A₂ (x₂ n)‖ = ‖- (A₂ (x₂ n) - A₂ (x₂'))‖ := by simp only [neg_sub]
-   have h₄' : ‖A₂ (x₂ (n+1) - x₂ n) - A₂ (e₂ (n+1))‖ = ‖A₂ (e₂ n)‖ := by rw [e₂]; rw[e₂]; simp only [map_sub,sub_sub_sub_cancel_left]; rw [h₄'', norm_neg]
+   have h₄' : ‖A₂ (x₂ (n+1) - x₂ n) - A₂ (e₂ (n+1))‖ = ‖A₂ (e₂ n)‖ := by
+      rw [e₂]; rw[e₂]; simp only [map_sub,sub_sub_sub_cancel_left]; rw [h₄'', norm_neg]
    have h₆ : ‖ey (n+1) - ey n‖ = (τ * ρ) * ‖(A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)‖
-      := by rw [←Φ_isdescending_eq2', norm_smul]; simp only [norm_mul, Real.norm_eq_abs,mul_eq_mul_right_iff, norm_eq_zero]
+      := by rw [←Φ_isdescending_eq2', norm_smul]; simp only [norm_mul, Real.norm_eq_abs,
+              mul_eq_mul_right_iff, norm_eq_zero]
             left
             have h1: τ ≥ 0 := by rcases admm.htau with ⟨h₁, _⟩; apply le_of_lt h₁
             have h2: ρ ≥ 0 := by apply le_of_lt admm.hrho
@@ -1196,7 +1302,9 @@ lemma Φ_isdescending_inequ5' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+,
             have h4: |ρ| = ρ := by apply abs_eq_self.mpr h2
             rw [h3, h4]
    symm
-   calc 2 * (1/(τ*ρ) * (inner ℝ (ey (n+1)) ((ey n)-(ey (n+1)))) - (1-τ)*ρ*‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2 + M (n+1) - ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1)))))
+   calc 2 * (1/(τ*ρ) * (inner ℝ (ey (n+1)) ((ey n)-(ey (n+1))))
+        - (1-τ)*ρ*‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
+        + M (n+1) - ρ * (inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A₂ (e₂ (n+1)))))
       _ = 2 / (τ * ρ) * (inner ℝ (ey (n+1)) ((ey n)-(ey (n+1))))
       - 2 * (1-τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + 2 * M (n+1)
@@ -1204,24 +1312,29 @@ lemma Φ_isdescending_inequ5' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+,
       _ = 2 / (τ * ρ) * (1 / 2 * (‖ey (n+1)‖^2 + ‖ey n‖^2 - ‖ey (n+1) - ey n‖^2)-‖ey (n+1)‖^2)
       - 2 * (1-τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + 2 * M (n+1)
-      - 2 * ρ * ( 1 / 2 * (‖A₂ (x₂ (n+1) - x₂ n)‖^2 + ‖A₂ (e₂ (n+1))‖^2 - ‖A₂ (x₂ (n+1) - x₂ n) - A₂ (e₂ (n+1))‖^2))
-      := by nth_rw 2 [inner_eq_norm]; rw [inner_sub_right]; rw [inner_eq_norm, real_inner_self_eq_norm_sq]
+      - 2 * ρ * ( 1 / 2 * (‖A₂ (x₂ (n+1) - x₂ n)‖^2 + ‖A₂ (e₂ (n+1))‖^2
+        - ‖A₂ (x₂ (n+1) - x₂ n) - A₂ (e₂ (n+1))‖^2))
+      := by nth_rw 2 [inner_eq_norm]; rw [inner_sub_right]; rw [inner_eq_norm,
+               real_inner_self_eq_norm_sq]
       _ = 2 / (τ * ρ) * (1 / 2 * (‖ey n‖^2 - ‖ey (n+1) - ey n‖^2-‖ey (n+1)‖^2))
       - 2 * (1-τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + 2 * M (n+1)
       - 2 * ρ * ( 1 / 2 * (‖A₂ (x₂ (n+1) - x₂ n)‖^2 + ‖A₂ (e₂ (n+1))‖^2 - ‖A₂ (e₂ n)‖^2))
       := by rw [h₄']; ring_nf
-      _ = 1 / (τ * ρ) * ((‖ey n‖^2 - ((τ * ρ) * ‖(A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)‖)^2-‖ey (n+1)‖^2))
+      _ = 1 / (τ * ρ) * ((‖ey n‖^2
+        - ((τ * ρ) * ‖(A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)‖)^2-‖ey (n+1)‖^2))
       - 2 * (1-τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + 2 * M (n+1)
       - 1 * ρ * ((‖A₂ (x₂ (n+1) - x₂ n)‖^2 + ‖A₂ (e₂ (n+1))‖^2 - ‖A₂ (e₂ n)‖^2))
       := by rw [h₆]; ring_nf
-      _ = 1 / (τ * ρ) * ((‖ey n‖^2 -‖ey (n+1)‖^2)) - 1 / (τ * ρ) * (τ * ρ) ^ 2 * (‖(A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)‖)^2
+      _ = 1 / (τ * ρ) * ((‖ey n‖^2 -‖ey (n+1)‖^2))
+        - 1 / (τ * ρ) * (τ * ρ) ^ 2 * (‖(A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)‖)^2
       - 2 * (1-τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + 2 * M (n+1)
       - 1 * ρ * ((‖A₂ (x₂ (n+1) - x₂ n)‖^2 + ‖A₂ (e₂ (n+1))‖^2 - ‖A₂ (e₂ n)‖^2))
       := by ring
-      _ = 1 / (τ * ρ) * ((‖ey n‖^2 -‖ey (n+1)‖^2)) - (τ * ρ) * (‖(A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)‖)^2
+      _ = 1 / (τ * ρ) * ((‖ey n‖^2 -‖ey (n+1)‖^2))
+        - (τ * ρ) * (‖(A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b)‖)^2
       - 2 * (1-τ) * ρ * ‖A₁ (x₁ (n+1)) + A₂ (x₂ (n+1)) - b‖^2
       + 2 * M (n+1)
       - 1 * ρ * ((‖A₂ (x₂ (n+1) - x₂ n)‖^2 + ‖A₂ (e₂ (n+1))‖^2 - ‖A₂ (e₂ n)‖^2))
@@ -1244,7 +1357,8 @@ lemma Φ_isdescending_inequ5' [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+,
       +ρ * ‖A₂ (e₂ n)‖^2
       := by ring_nf
 
-lemma Φ_isdescending_inequ5 [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+ , 1 / (τ * ρ) * (‖ey n‖ ^ 2 - ‖ey (n+1)‖ ^ 2)
+lemma Φ_isdescending_inequ5 [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n : ℕ+ , 1 / (τ * ρ) * (‖ey n‖ ^ 2 - ‖ey (n+1)‖ ^ 2)
       - (2 - τ) * ρ * ‖A₁ (x₁ (n + 1)) + A₂ (x₂ (n + 1)) - b‖ ^ 2 + 2 * M (n+1)
       - ρ * ‖A₂ (x₂ (n+1) - x₂ n)‖^2 - ρ * ‖A₂ (e₂ (n+1))‖^2 + ρ * ‖A₂ (e₂ n)‖^2 ≥ 0:= by
    intro n
@@ -1262,13 +1376,16 @@ lemma basic_inequ₁' (n : ℕ+) : 2 * inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (A
       rw [this]
    rw [←sub_nonneg];
    have : ‖A₂ (x₂ n - x₂ (n+1))‖^2
-      + ‖A₁ (x₁ n) + A₂ (x₂ n) - b‖^2 - 2 * inner ℝ (A₂ (x₂ (n+1) - x₂ (n))) (A₁ (x₁ n) + A₂ (x₂ n) - b)
-      = ‖A₂ (x₂ n - x₂ (n+1))‖^2 - 2 * inner ℝ (A₂ (x₂ (n+1) - x₂ (n))) (A₁ (x₁ n) + A₂ (x₂ n) - b) + ‖A₁ (x₁ n) + A₂ (x₂ n) - b‖^2
+      + ‖A₁ (x₁ n) + A₂ (x₂ n) - b‖^2 - 2 * inner ℝ (A₂ (x₂ (n+1) - x₂ (n)))
+        (A₁ (x₁ n) + A₂ (x₂ n) - b)
+      = ‖A₂ (x₂ n - x₂ (n+1))‖^2 - 2 * inner ℝ (A₂ (x₂ (n+1) - x₂ (n))) (A₁ (x₁ n) + A₂ (x₂ n) - b)
+        + ‖A₁ (x₁ n) + A₂ (x₂ n) - b‖^2
       := by ring_nf
    rw [this, norm_abs, ← norm_sub_sq_real]
    apply pow_two_nonneg
 
-lemma M_le [Setting E₁ E₂ F admm admm_kkt](n : ℕ+)(htau : 0 < τ ∧ τ ≤ 1 ): 2 * M (n + 1) ≤ (1 - τ) * ρ * ‖A₂ (x₂ n - x₂ (n + 1))‖^2
+lemma M_le [Setting E₁ E₂ F admm admm_kkt] (n : ℕ+) (htau : 0 < τ ∧ τ ≤ 1) :
+    2 * M (n + 1) ≤ (1 - τ) * ρ * ‖A₂ (x₂ n - x₂ (n + 1))‖^2
       + (1 - τ) * ρ * ‖A₁ (x₁ n) + A₂ (x₂ n) - b‖^2 := by
    have : (1 - τ) * ρ * ‖A₂ (x₂ n - x₂ (n + 1))‖ ^ 2
          + (1 - τ) * ρ * ‖A₁ (x₁ n) + A₂ (x₂ n) - b‖^2
@@ -1288,7 +1405,7 @@ lemma M_le [Setting E₁ E₂ F admm admm_kkt](n : ℕ+)(htau : 0 < τ ∧ τ �
    · exact this
    linarith [admm.hrho]
 
-lemma Φ_isdescending_inequ6 [Setting E₁ E₂ F admm admm_kkt](htau : 0 < τ ∧ τ ≤ 1 ): ∀ n : ℕ+,
+lemma Φ_isdescending_inequ6 [Setting E₁ E₂ F admm admm_kkt] (htau : 0 < τ ∧ τ ≤ 1) : ∀ n : ℕ+,
       1 / (τ * ρ) * ‖ey n‖^2 + ρ * ‖A₂ (e₂ n)‖^2 + (1 - τ) * ρ * ‖A₁ (e₁ n) + A₂ (e₂ n)‖ ^ 2
       - (1 / (τ * ρ) * ‖ey (n+1)‖^2 + ρ * ‖A₂ (e₂ (n+1))‖ ^ 2
       + (1 -τ ) * ρ * ‖A₁ (e₁ (n+1)) + A₂ (e₂ (n+1))‖ ^ 2)
@@ -1314,11 +1431,14 @@ lemma Φ_isdescending_inequ6 [Setting E₁ E₂ F admm admm_kkt](htau : 0 < τ �
          0 ≤ ey_diff - t_Ax_Ax_n1 + 2*(M (n+1)) - t_A_diff_x' - A2_e2_n1 + A2_e2_n := by
             dsimp [ey_diff, t_Ax_Ax_n1, t_A_diff_x', A2_e2_n1, A2_e2_n]
             linarith [Φ_isdescending_inequ5 n]
-         _ ≤ ey_diff - t_Ax_Ax_n1 + tt_A_diff_x' + tt_Ax_Ax_n - t_A_diff_x' - A2_e2_n1 + A2_e2_n := by
+         _ ≤ ey_diff - t_Ax_Ax_n1 + tt_A_diff_x' + tt_Ax_Ax_n - t_A_diff_x'
+           - A2_e2_n1 + A2_e2_n := by
             dsimp [ey_diff, t_Ax_Ax_n1, tt_A_diff_x', tt_Ax_Ax_n, t_A_diff_x', A2_e2_n1, A2_e2_n]
             linarith [M_le n htau]
-         _= e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - t_Ax_Ax_n1 + tt_A_diff_x' + tt_Ax_Ax_n - t_A_diff_x' := by ring
-         _= e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - t_Ax_Ax_n1 + tt_A_diff_x' + Ae_Ae_n - t_A_diff_x' := by
+         _= e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - t_Ax_Ax_n1 + tt_A_diff_x' + tt_Ax_Ax_n
+           - t_A_diff_x' := by ring
+         _= e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - t_Ax_Ax_n1 + tt_A_diff_x' + Ae_Ae_n
+           - t_A_diff_x' := by
             dsimp [Ae_Ae_n, tt_Ax_Ax_n]; rw [Φ_isdescending_eq3' n]
          _= e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1
          - Ae_Ae_n1 + Ae_Ae_n - Ax_Ax_n1 + t_A_diff_x - A_diff_x' - t_A_diff_x' := by
@@ -1331,7 +1451,8 @@ lemma Φ_isdescending_inequ6 [Setting E₁ E₂ F admm admm_kkt](htau : 0 < τ �
       rw[norm_comm A₂ (x₂ n) (x₂ (n+1))]
    have equation := by
       calc left_sub_right
-         _= e_y_n + A2_e2_n + Ae_Ae_n - e_y_n1 - A2_e2_n1 - Ae_Ae_n1 - (Ax_Ax_n1 + A_diff_x) := by ring
+         _= e_y_n + A2_e2_n + Ae_Ae_n - e_y_n1 - A2_e2_n1 - Ae_Ae_n1
+           - (Ax_Ax_n1 + A_diff_x) := by ring
          _= e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - Ae_Ae_n1 + Ae_Ae_n - Ax_Ax_n1
             + t_A_diff_x - A_diff_x - t_A_diff_x := by ring
          _= e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - Ae_Ae_n1 + Ae_Ae_n - Ax_Ax_n1
@@ -1346,7 +1467,8 @@ lemma Φ_isdescending_inequ6 [Setting E₁ E₂ F admm admm_kkt](htau : 0 < τ �
             ring
    have res := by
       calc
-         0 ≤ e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - Ae_Ae_n1 + Ae_Ae_n - Ax_Ax_n1 + t_A_diff_x - A_diff_x' - t_A_diff_x':= by exact cond
+         0 ≤ e_y_n + A2_e2_n - e_y_n1 - A2_e2_n1 - Ae_Ae_n1 + Ae_Ae_n - Ax_Ax_n1 + t_A_diff_x
+           - A_diff_x' - t_A_diff_x':= by exact cond
          _= left_sub_right := by rw [equation]
          _= 1/(τ*ρ) * ‖ey n‖^2 + ρ * ‖A₂ (e₂ n)‖^2 + (1-τ)*ρ * ‖A₁ (e₁ n) + A₂ (e₂ n)‖^2
          -(
@@ -1372,21 +1494,27 @@ lemma basic_inequ₂ (n : ℕ+) : - 2 * inner ℝ (A₂ (x₂ (n+1) - x₂ n)) (
    let S1 := A₂ (x₂ (n+1) - x₂ n)
    let S2 := A₁ (x₁ n) + A₂ (x₂ n) - b
    let s1 := √τ
-   have h1 : s1 ^2 * ‖S1‖^2 = ‖s1 • S1‖ ^2 := by rw [norm_smul, mul_pow]; simp only [Real.norm_eq_abs,sq_abs]
-   have h2 : s1⁻¹ ^2 * ‖S2‖^2 = ‖s1⁻¹ • S2‖ ^2 := by rw [norm_smul, mul_pow]; simp only [inv_pow, norm_inv, Real.norm_eq_abs, sq_abs]
+   have h1 : s1 ^2 * ‖S1‖^2 = ‖s1 • S1‖ ^2 := by
+      rw [norm_smul, mul_pow]; simp only [Real.norm_eq_abs,sq_abs]
+   have h2 : s1⁻¹ ^2 * ‖S2‖^2 = ‖s1⁻¹ • S2‖ ^2 := by
+      rw [norm_smul, mul_pow]; simp only [inv_pow, norm_inv, Real.norm_eq_abs, sq_abs]
    have : s1 ≠ 0 := by
       have h₃ : s1 = √τ := by rfl
       rw [h₃]
       apply Real.sqrt_ne_zero'.mpr
       rcases admm.htau with ⟨h₁, _⟩
       assumption
-   have h3 : inner (𝕜 := ℝ) S1 S2 = inner (𝕜 := ℝ) (s1 • S1) (s1⁻¹ • S2) := by rw [inner_smul_left, inner_smul_right]; rw [← mul_assoc]; simp; rw [mul_inv_cancel₀, one_mul]; exact this
+   have h3 : inner (𝕜 := ℝ) S1 S2 = inner (𝕜 := ℝ) (s1 • S1) (s1⁻¹ • S2) := by
+      rw [inner_smul_left, inner_smul_right]; rw [← mul_assoc]; simp
+      rw [mul_inv_cancel₀, one_mul]; exact this
    rw [h1, h2, h3]
-   have : ‖s1 • S1‖ ^ 2 + ‖s1⁻¹ • S2‖ ^ 2 - -2 * ⟪s1 • S1, s1⁻¹ • S2⟫_ℝ = ‖s1 • S1‖ ^ 2 + 2 * ⟪s1 • S1, s1⁻¹ • S2⟫_ℝ + ‖s1⁻¹ • S2‖ ^ 2 := by ring_nf
+   have : ‖s1 • S1‖ ^ 2 + ‖s1⁻¹ • S2‖ ^ 2 - -2 * ⟪s1 • S1, s1⁻¹ • S2⟫_ℝ
+     = ‖s1 • S1‖ ^ 2 + 2 * ⟪s1 • S1, s1⁻¹ • S2⟫_ℝ + ‖s1⁻¹ • S2‖ ^ 2 := by ring_nf
    rw [this, ←norm_add_sq_real]
    apply pow_two_nonneg
 
-lemma Φ_isdescending_inequ7 [Setting E₁ E₂ F admm admm_kkt](htau : 1 < τ ): ∀ n : ℕ+, 1 / (τ * ρ) * ‖ey n‖ ^ 2 + ρ * ‖A₂ (e₂ n)‖ ^ 2
+lemma Φ_isdescending_inequ7 [Setting E₁ E₂ F admm admm_kkt] (htau : 1 < τ) :
+    ∀ n : ℕ+, 1 / (τ * ρ) * ‖ey n‖ ^ 2 + ρ * ‖A₂ (e₂ n)‖ ^ 2
       + (1 - 1 / τ) * ρ * ‖A₁ (e₁ n) + A₂ (e₂ n)‖^2 -
       (1 / (τ * ρ) * ‖ey (n + 1)‖^ 2 + ρ * ‖A₂ (e₂ (n + 1))‖^2
       + (1 - 1 / τ) * ρ * ‖A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1))‖^2)
@@ -1400,7 +1528,8 @@ lemma Φ_isdescending_inequ7 [Setting E₁ E₂ F admm admm_kkt](htau : 1 < τ )
    let b₁ := ρ * ‖A₂ (e₂ n)‖^2; let b₂ := ρ * ‖A₂ (e₂ (n+1))‖^2
    let c₁ := (1 - (1 / τ)) * ρ * ‖e_sum‖^2; let c₂ := (1 - (1 / τ)) * ρ * ‖e_sum_1‖^2
    let d₁ := (1 + τ - τ^2) * ρ * ‖A₂ x_diff‖^2; let d₂ := (1 + 1 / τ - τ) * ρ * ‖r_n_1‖^2
-   have M_inequ : 2 * (M (n+1)) ≤ (τ^2 - τ) * ρ * ‖A₂ x_diff‖ ^ 2 + (1 - 1 / τ) * ρ * ‖r_n‖ ^ 2 := by
+   have M_inequ : 2 * (M (n+1)) ≤ (τ^2 - τ) * ρ * ‖A₂ x_diff‖ ^ 2
+     + (1 - 1 / τ) * ρ * ‖r_n‖ ^ 2 := by
       have h1: 2 * (M (n+1)) = (τ - 1) * ρ * (-2 * (inner ℝ (A₂ x_diff) (r_n))) := by
          calc
             _= 2 * (1 - τ) * ρ *  (inner ℝ (A₂ x_diff) (r_n)) := by
@@ -1433,18 +1562,22 @@ lemma Φ_isdescending_inequ7 [Setting E₁ E₂ F admm admm_kkt](htau : 1 < τ )
       ≥ 0 := by
          calc
          _ ≥ 1 / (τ * ρ) * (‖ey n‖^2 - ‖ey (n+1)‖^2) - (2 - τ) * ρ * ‖r_n_1‖^2
-            + 2 * (M (n+1)) - ρ * ‖A₂ x_diff‖^2 - ρ * ‖A₂ (e₂ (n+1))‖^2 + ρ * ‖A₂ (e₂ n)‖^2 := by linarith
+            + 2 * (M (n+1)) - ρ * ‖A₂ x_diff‖^2 - ρ * ‖A₂ (e₂ (n+1))‖^2
+              + ρ * ‖A₂ (e₂ n)‖^2 := by linarith
          _ ≥ 0 := by apply Φ_isdescending_inequ5
    have rw_rn_1 : r_n_1 = e_sum_1:= by apply Φ_isdescending_eq3
    have rw_rn : r_n = e_sum:= by apply Φ_isdescending_eq3'
    rw [rw_rn_1, rw_rn, mul_sub] at H
-   have H_split : (2 - τ) * ρ * ‖e_sum_1‖^2 = (1 - (1 / τ)) * ρ * ‖e_sum_1‖^2 + (1 + (1 / τ) - τ) * ρ * ‖r_n_1‖^2 := by
+   have H_split : (2 - τ) * ρ * ‖e_sum_1‖^2 =
+     (1 - (1 / τ)) * ρ * ‖e_sum_1‖^2 + (1 + (1 / τ) - τ) * ρ * ‖r_n_1‖^2 := by
       calc
          _ = (1 - (1 / τ)) * ρ * ‖e_sum_1‖^2 + (1 + (1 / τ) - τ) * ρ * ‖e_sum_1‖^2 := by ring
          _ = (1 - (1 / τ)) * ρ * ‖e_sum_1‖^2 + (1 + (1 / τ) - τ) * ρ * ‖r_n_1‖^2 := by rw [rw_rn_1]
    rw [H_split] at H
-   have H_simp : a₁ - a₂ - (c₂ + d₂) + (τ^2 - τ) * ρ * ‖A₂ x_diff‖^2 + c₁ - ρ * ‖A₂ x_diff‖^2 - b₂ + b₁ ≥ 0 := by apply H
-   have H_simp' : a₁ - a₂ - (c₂ + d₂) - (1 + τ - τ^2) * ρ * ‖A₂ x_diff‖^2 + c₁ - b₂ + b₁ ≥ 0 := by linarith [H_simp]
+   have H_simp : a₁ - a₂ - (c₂ + d₂) + (τ^2 - τ) * ρ * ‖A₂ x_diff‖^2 + c₁ - ρ * ‖A₂ x_diff‖^2
+     - b₂ + b₁ ≥ 0 := by apply H
+   have H_simp' : a₁ - a₂ - (c₂ + d₂) - (1 + τ - τ^2) * ρ * ‖A₂ x_diff‖^2 + c₁
+     - b₂ + b₁ ≥ 0 := by linarith [H_simp]
    have H_simp'' : a₁ - a₂ - (c₂ + d₂) - d₁ + c₁ - b₂ + b₁ ≥ 0 := by apply H_simp'
    have rel_simp : a₁ + b₁ + c₁ - (a₂ + b₂ + c₂) ≥ d₂ + d₁ := by linarith [H_simp']
    apply rel_simp
@@ -1455,20 +1588,22 @@ lemma τ_segment [Setting E₁ E₂ F admm admm_kkt] : (0 < τ ∧ τ ≤ 1) ∨
    ·  left;exact ⟨h1, h⟩
    ·  right;linarith
 
-lemma τ_min1_1 [Setting E₁ E₂ F admm admm_kkt] (h: 0 < τ ∧ τ ≤ 1) : min τ (1 + τ - τ ^ 2) = τ := by
+lemma τ_min1_1 [Setting E₁ E₂ F admm admm_kkt] (h : 0 < τ ∧ τ ≤ 1) : min τ (1 + τ - τ ^ 2) = τ := by
    rcases h with ⟨h1, h2⟩
    apply min_eq_left
    have h3: τ ^ 2 ≤ 1 := by
       apply pow_le_one₀;linarith;linarith
    linarith
 
-lemma τ_min1_2 [Setting E₁ E₂ F admm admm_kkt] (h: τ > 1 ) : min τ (1 + τ - τ ^ 2) = 1 + τ - τ ^ 2 := by
+lemma τ_min1_2 [Setting E₁ E₂ F admm admm_kkt] (h : τ > 1) :
+    min τ (1 + τ - τ ^ 2) = 1 + τ - τ ^ 2 := by
    apply min_eq_right
    have : 1 < τ ^ 2 := by
       exact one_lt_pow₀ h (by norm_num)
    linarith
 
-lemma τ_min2_1 [Setting E₁ E₂ F admm admm_kkt] (h: 0 < τ ∧ τ ≤ 1) : min 1 (1 + 1 / τ - τ ) = 1 := by
+lemma τ_min2_1 [Setting E₁ E₂ F admm admm_kkt] (h : 0 < τ ∧ τ ≤ 1) :
+    min 1 (1 + 1 / τ - τ ) = 1 := by
    rcases h with ⟨h1, h2⟩
    apply min_eq_left
    have h3: τ ≤ 1 / τ :=
@@ -1478,7 +1613,8 @@ lemma τ_min2_1 [Setting E₁ E₂ F admm admm_kkt] (h: 0 < τ ∧ τ ≤ 1) : m
          apply one_le_one_div h1 h2
    linarith
 
-lemma τ_min2_2 [Setting E₁ E₂ F admm admm_kkt] (h: τ > 1 ) : min 1 (1 + 1 / τ - τ ) = 1 + 1 / τ - τ  := by
+lemma τ_min2_2 [Setting E₁ E₂ F admm admm_kkt] (h : τ > 1) :
+    min 1 (1 + 1 / τ - τ ) = 1 + 1 / τ - τ  := by
    apply min_eq_right
    have : τ > 1 / τ :=
    calc
@@ -1487,7 +1623,8 @@ lemma τ_min2_2 [Setting E₁ E₂ F admm admm_kkt] (h: τ > 1 ) : min 1 (1 + 1 
          rw [one_div, ← inv_one];apply inv_strictAnti₀;linarith;exact h
    linarith
 
-lemma τ_min3_1 [Setting E₁ E₂ F admm admm_kkt] (h: 0 < τ ∧ τ ≤ 1) : max (1 - τ) (1 - 1 / τ) = 1 - τ := by
+lemma τ_min3_1 [Setting E₁ E₂ F admm admm_kkt] (h : 0 < τ ∧ τ ≤ 1) :
+    max (1 - τ) (1 - 1 / τ) = 1 - τ := by
    rcases h with ⟨h1, h2⟩
    apply max_eq_left
    have h3: τ ≤ 1 / τ :=
@@ -1497,7 +1634,8 @@ lemma τ_min3_1 [Setting E₁ E₂ F admm admm_kkt] (h: 0 < τ ∧ τ ≤ 1) : m
          apply one_le_one_div h1 h2
    linarith
 
-lemma τ_min3_2 [Setting E₁ E₂ F admm admm_kkt] (h: τ > 1) : max (1 - τ) (1 - 1 / τ) = 1 - 1 / τ  := by
+lemma τ_min3_2 [Setting E₁ E₂ F admm admm_kkt] (h : τ > 1) :
+    max (1 - τ) (1 - 1 / τ) = 1 - 1 / τ  := by
    apply max_eq_right
    have : τ > 1 / τ :=
    calc
@@ -1506,7 +1644,8 @@ lemma τ_min3_2 [Setting E₁ E₂ F admm admm_kkt] (h: τ > 1) : max (1 - τ) (
          rw [one_div, ← inv_one];apply inv_strictAnti₀;linarith;exact h
    linarith
 
-lemma Φ_isdescending [Setting E₁ E₂ F admm admm_kkt]: ∀ n : ℕ+, (Φ n ) - (Φ (n + 1) ) ≥ (min τ (1 + τ - τ ^ 2) )* ρ
+lemma Φ_isdescending [Setting E₁ E₂ F admm admm_kkt] :
+    ∀ n : ℕ+, (Φ n ) - (Φ (n + 1) ) ≥ (min τ (1 + τ - τ ^ 2) )* ρ
       * ‖A₂ (x₂ n - x₂ (n + 1))‖ ^ 2 + (min 1 (1 + 1 / τ - τ )) * ρ *
       ‖A₁ (e₁ (n + 1)) + A₂ (e₂ (n + 1))‖ ^ 2 :=by
    intro n

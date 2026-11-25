@@ -20,7 +20,7 @@ section preparation
 
 variable {E F : Type*} [CompleteLinearOrder F]
 
-private lemma l0 {f : E → F}(y : F) (h : (f ⁻¹' Set.Iic y).Nonempty) :
+private lemma l0 {f : E → F} (y : F) (h : (f ⁻¹' Set.Iic y).Nonempty) :
     sInf {f x | x ∈ f ⁻¹' Set.Iic y} = sInf {f x | x : E}:= by
   have h₀ : {f x | x : E} = {f x | x ∈ f ⁻¹' Set.Iic y} ∪ {f x | x ∈ (f ⁻¹' Set.Iic y)ᶜ} := by
     ext y'; constructor
@@ -118,6 +118,8 @@ variable {𝕜 : Type _} {f : E → F}
 variable [AddCommMonoid E] [CompleteLinearOrder F]
 variable [Ring 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜] [DenselyOrdered 𝕜] [Module 𝕜 E]
 
+/-- `f` is strongly quasiconvex over `𝕜`: for all `x ≠ y` and all `a, b > 0` with `a + b = 1`,
+`f (a • x + b • y) < max (f x) (f y)`. -/
 def strong_quasi (f : E → F) (𝕜 : Type _) [Ring 𝕜] [LinearOrder 𝕜]
     [IsStrictOrderedRing 𝕜] [Module 𝕜 E] : Prop :=
   ∀ ⦃x⦄, ∀ ⦃y⦄, x ≠ y → ∀ ⦃a b : 𝕜⦄, 0 < a → 0 < b → a + b = 1

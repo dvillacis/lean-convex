@@ -1,12 +1,23 @@
 /-
 Copyright (c) 2023 Wanyi He. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Wanyi He, Chenyi Li, Zichen Wang
+Authors: Wanyi He, Chenyi Li, Zichen Wang
 -/
 import Mathlib.Analysis.LocallyConvex.Separation
 import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.Analysis.Normed.Module.HahnBanach
 
+/-!
+# Subgradients in a normed space
+
+For a function `f : E → ℝ` on a real seminormed space `E`, this file defines subgradients as
+continuous linear functionals: `Banach_HasSubgradientAt`, `Banach_HasSubgradientWithinAt`, and
+the sets of subgradients `Banach_SubderivAt` and `Banach_SubderivWithinAt`. It also defines the
+epigraph `Epi f s` of `f` over a set `s`.
+
+The main result is `Banach_SubderivWithinAt.Nonempty`: a function that is convex on `s` and
+continuous on the interior of `s` has a subgradient within `s` at every interior point of `s`.
+-/
 
 section
 
@@ -72,20 +83,26 @@ variable {f : E → ℝ} {x : E} {s : Set E}
 
 open Filter
 
-/-- Subgradient of functions --/
+/-- Subgradient of functions -/
 def Banach_HasSubgradientAt (f : E → ℝ) (g : E →L[ℝ] ℝ) (x : E) : Prop :=
   ∀ y, f y ≥ f x + g (y - x)
 
+/-- The continuous linear functional `g` is a subgradient of `f` at `x` within `s`:
+`f y ≥ f x + g (y - x)` for all `y ∈ s`. -/
 def Banach_HasSubgradientWithinAt (f : E → ℝ) (g : E →L[ℝ] ℝ) (s : Set E) (x : E) : Prop :=
   ∀ y ∈ s, f y ≥ f x + g (y - x)
 
-/-- Subderiv of functions --/
+/-- Subderiv of functions -/
 def Banach_SubderivAt (f : E → ℝ) (x : E) : Set (E →L[ℝ] ℝ) :=
   {g : E →L[ℝ] ℝ| Banach_HasSubgradientAt f g x}
 
+/-- The subdifferential of `f` at `x` within `s`: the set of continuous linear functionals `g`
+such that `f y ≥ f x + g (y - x)` for all `y ∈ s`. -/
 def Banach_SubderivWithinAt (f : E → ℝ) (s : Set E) (x : E) : Set (E →L[ℝ] ℝ) :=
   {g : E →L[ℝ] ℝ| Banach_HasSubgradientWithinAt f g s x}
 
+/-- The epigraph of `f` over the set `s`: the pairs `(x, t) : E × ℝ` with `x ∈ s` and
+`f x ≤ t`. -/
 def Epi (f : E → ℝ) (s : Set E) : Set (E × ℝ) :=
   {p : E × ℝ | p.1 ∈ s ∧ f p.1 ≤ p.2}
 
@@ -158,7 +175,6 @@ theorem Banach_SubderivWithinAt.Nonempty (hf : ConvexOn ℝ s f)
     have h1 : f x - a.2 < (g.1 a.1 - g.1 x) / u := by
       rw [lt_div_iff₀ hu0]; linarith
     rw [e]; linarith
-
   have key2₀ : ∀ a ∈ (Epi f s), a.1 ∈ interior s → h' (a.1 - x) + f x ≤  a.2 := by
     intro a ha posa
     by_cases hfa : f a.1 < a.2
@@ -179,7 +195,6 @@ theorem Banach_SubderivWithinAt.Nonempty (hf : ConvexOn ℝ s f)
       Tendsto (fun n => h' ((an n).1 - x) + f x) atTop (nhds (h' (a.1 - x) + f x)) := by
       exact tendsto_const_nhds
     exact le_of_tendsto_of_tendsto' cleft can2 hxn
-
   have key2₁ : ∀ a ∈ (Epi f s), a.1 ∉ interior s → h' (a.1 - x) + f x ≤ a.2 := by
     intro a ha _
     let an : ℕ → E × ℝ := fun n => ((n : ℝ) / (n + 1)) • a + ((1 : ℝ) / (n + 1)) • (x, f x)
@@ -235,7 +250,6 @@ theorem Banach_SubderivWithinAt.Nonempty (hf : ConvexOn ℝ s f)
       apply Filter.Tendsto.add_const
       apply Filter.Tendsto.comp (hh (a.1 - x)) (Tendsto.sub_const can1 x)
     apply le_of_tendsto_of_tendsto' cleft can2 han
-
   have key2 : ∀ a ∈ (Epi f s), h' (a.1 - x) + f x ≤ a.2 := by
     intro a ha
     by_cases posa : a.1 ∈ interior s

@@ -27,7 +27,7 @@ Two main theorems are formalized in this file
 variable (a b c d : ℝ)
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable {f : E → ℝ} {f' : E → E} {x y : E} {s : Set E}
-variable {x y grad x': E} {gradient' : E}
+variable {x y grad x' : E} {gradient' : E}
 local notation "⟪" x ", " y "⟫" => @inner ℝ _ _ x y
 
 lemma Vert_abs : ‖|a| - |b|‖ ≤ ‖a - b‖ := by
@@ -74,7 +74,7 @@ lemma Simplifying₂ (h₁ : a ≠ 0) (h₂ : 0 ≤ c) :
   rw [Real.norm_eq_abs, l₁, l₂, mul_assoc,l₃, mul_comm d, ← mul_div, ← mul_assoc, l₄]
   norm_num; ring_nf
 
-lemma div_div_mul (h₁ : a / b ≤ c) (h₂ : 0 < a) (h₃ : 0 < b) (h₄ : 0 < c):
+lemma div_div_mul (h₁ : a / b ≤ c) (h₂ : 0 < a) (h₃ : 0 < b) (h₄ : 0 < c) :
     1 / c ≤ b / a := by
   have : a ≤ c * b := Iff.mp (div_le_iff₀ h₃) h₁
   have : a ≤ b * c := by linarith
@@ -82,12 +82,13 @@ lemma div_div_mul (h₁ : a / b ≤ c) (h₂ : 0 < a) (h₃ : 0 < b) (h₄ : 0 <
   rw [one_mul]
   apply this
 
-theorem HasGradientAt.one_div (hf : HasGradientAt f grad x)(h₁: ¬ f x = (0 : ℝ)):
+theorem HasGradientAt.one_div (hf : HasGradientAt f grad x) (h₁ : ¬ f x = (0 : ℝ)) :
     HasGradientAt (fun y => (1 : ℝ) / (f y)) (- ((1 : ℝ) / (f x) ^ (2 : ℕ)) • grad) x := by
   have hf' : HasGradientAt f grad x := hf
   rw [HasGradient_iff_Convergence_Point]
   intro ε εpos
-  rcases (ContinuousAt_Convergence (ContinuousAt.abs (HasGradientAt.continuousAt hf))) ε εpos with ⟨δ', _ , _⟩
+  rcases (ContinuousAt_Convergence (ContinuousAt.abs (HasGradientAt.continuousAt hf))) ε εpos with
+    ⟨δ', _ , _⟩
   have ε1pos : 0 < ε * ‖f x‖ * ‖f x‖ / 4 := by
     apply div_pos
     repeat apply mul_pos
@@ -247,13 +248,12 @@ theorem HasGradientAt.one_div (hf : HasGradientAt f grad x)(h₁: ¬ f x = (0 : 
     have hp₂ : ‖x - x'‖ ≤ δ₂ := by
       have h₂ : min δ₀ δ₂ ≤ δ₂ := by exact min_le_right δ₀ δ₂
       apply le_trans h' h₂
-
     have zp1 :‖f x * (f x - f x' + inner ℝ grad (x' - x)) / (f x * f x * f x')‖ =
         ‖(f x - f x' + inner ℝ grad (x' - x)) / (f x * f x')‖ := by
       rw [mul_comm, mul_assoc (f x) (f x) (f x'),
-      div_mul_eq_div_div ((f x - f x' + inner ℝ grad (x' - x)) * (f x)) (f x) (f x * f x'), mul_div_cancel_right₀]
+      div_mul_eq_div_div ((f x - f x' + inner ℝ grad (x' - x)) * (f x)) (f x) (f x * f x'),
+      mul_div_cancel_right₀]
       apply h₁
-
     have zp2 : ‖f x‖ * ‖f x‖/2 ≤ ‖f x * f x'‖ := by
       have h' : ‖f x * f x'‖ = ‖f x‖ * ‖f x'‖ := by
         exact norm_mul (f x) (f x')
@@ -292,7 +292,8 @@ theorem HasGradientAt.one_div (hf : HasGradientAt f grad x)(h₁: ¬ f x = (0 : 
         apply Iff.mpr norm_pos_iff h₁
         norm_num
       apply lt_of_lt_of_le h'' h'
-    have zp5 : ((ε * ‖f x‖ * ‖f x‖ / 4) * ‖x - x'‖) * (2 / (‖f x‖ * ‖f x‖)) = (ε / 2) * ‖x' - x‖ := by
+    have zp5 : ((ε * ‖f x‖ * ‖f x‖ / 4) * ‖x - x'‖) * (2 / (‖f x‖ * ‖f x‖)) =
+        (ε / 2) * ‖x' - x‖ := by
       have l : ‖f x‖ ≠ 0 := by
         exact Iff.mpr norm_ne_zero_iff h₁
       calc

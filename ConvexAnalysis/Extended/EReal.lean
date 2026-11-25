@@ -1,6 +1,7 @@
 /-
 Copyright (c) 2025 Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Zichen Wang, Chenyi Li
 -/
 import Mathlib.Data.EReal.Basic
 import Mathlib.Topology.Instances.EReal.Lemmas
@@ -504,6 +505,7 @@ lemma EReal.mul_pos_real_le {a b : EReal} {c : ℝ} (hab : a ≤ b) (hc : c > 0)
 /-
 Lemma. Positive real factors pull out of finite sums in extended reals: a * (∑ f i) = ∑ a * f i.
 -/
+set_option linter.unusedDecidableInType false in
 lemma EReal.finset_mul_sum {ι : Type*} [DecidableEq ι] :
     (τ : Finset ι) → (f : ι → EReal) → (a : ℝ) → (hpos : a > 0) →
     a * ∑ i ∈ τ, f i = ∑ i ∈ τ, a * f i := by
@@ -871,7 +873,8 @@ lemma Range.eq_if' {α : Type u} {i : Sort u_1} {f g : i → α} (eq : f = g) :
 /-
 Lemma. A property of (bounded) indexed suprema in extended reals.
 -/
-lemma biSup_coe_const_add' {α : Type*} {a : EReal} {f : α → EReal} {s : Set α} (p : a < ⊤) (q : a > ⊥) :
+lemma biSup_coe_const_add' {α : Type*} {a : EReal} {f : α → EReal} {s : Set α} (p : a < ⊤)
+    (q : a > ⊥) :
     a + (⨆ m ∈ s, f m) =  (⨆ m ∈ s, a + f m) := by
   lift a to ℝ using ⟨LT.lt.ne_top p, LT.lt.ne_bot q⟩
   dsimp [iSup]
@@ -1101,6 +1104,7 @@ lemma bot_of_exist_bot_of_convex_of_univ {E} [AddCommGroup E] [Module ℝ E] {f 
 Lemma. Jensen-type inequality: for a convex f and
   barycentric weights on points in s, f(∑ wᵢ • pᵢ) ≤ ∑ wᵢ • f(pᵢ).
 -/
+set_option linter.unusedDecidableInType false in
 theorem ConvexOn.map_sum_le' {E s} {ι : Type*} [AddCommGroup E] [Module ℝ E] [DecidableEq ι]
     {f : E → EReal} {p : ι → E} (hf : ConvexOn ℝ s f) :
     (t : Finset ι) → (w : ι → ℝ) → (∀ i ∈ t, 0 ≤ w i) → (∑ i ∈ t, w i = 1) →
