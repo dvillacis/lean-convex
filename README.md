@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/dvillacis/lean-convex)](https://github.com/dvillacis/lean-convex/releases)
 [![Documentation](https://img.shields.io/badge/docs-API-blue)](https://david.villacis.net/lean-convex/docs/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24530553.svg)](https://doi.org/10.5281/zenodo.24530553)
 
 A Lean 4 / Mathlib library of convex analysis and subdifferential calculus: convex functions,
 subgradients, conjugates, proximal maps, optimality conditions and first-order algorithms. It
@@ -176,7 +177,10 @@ To make a release: update `version` in `lakefile.toml`, `version` and `date-rele
 
 ## Citing
 
-Use "Cite this repository" on GitHub, which reads [`CITATION.cff`](CITATION.cff). Since most of
+Each release is archived on Zenodo. The DOI
+[10.5281/zenodo.24530553](https://doi.org/10.5281/zenodo.24530553) always points to the latest
+version; the Zenodo page lists the DOI of each version. Use "Cite this repository" on GitHub,
+which reads [`CITATION.cff`](CITATION.cff). Since most of
 the library is a port, please also cite [OptLib](https://github.com/optsuite/optlib).
 
 ## License
