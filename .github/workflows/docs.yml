@@ -1,0 +1,73 @@
+name: Documentation
+
+# On every push to main: build the API documentation with doc-gen4 and publish it on
+# GitHub Pages, at https://david.villacis.net/lean-convex/docs/.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    # The first build after a dependency update also documents Mathlib; later builds
+    # take its documentation from the cache.
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: leanprover/lean-action@ba3fdfe5c4476c925da13bf11a005ddb47e47aee # v1.7.1
+        with:
+          lint: false
+
+      # doc-gen4 analyses Mathlib with many processes at once and runs out of memory on the
+      # hosted runner ("cannot allocate memory" when Lake spawns a process). Add swap, and
+      # let process creation succeed while the build has a large address space.
+      - name: More memory
+        run: |
+          sudo fallocate -l 24G /mnt/docs.swap
+          sudo chmod 600 /mnt/docs.swap
+          sudo mkswap /mnt/docs.swap
+          sudo swapon /mnt/docs.swap
+          sudo sysctl -w vm.overcommit_memory=1
+          free -h
+
+      # The documentation goes to docs/docs; send the root of the site there.
+      - name: Site root
+        run: |
+          mkdir -p docs
+          echo '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=docs/"><title>ConvexAnalysis</title><a href="docs/">Documentation</a>' > docs/index.html
+
+      # No tagged releases; pinned to a commit of main. The action only builds: when it also
+      # deploys, the deployment sometimes does not find the artifact uploaded just before
+      # (actions/deploy-pages#451), which fails the job and loses the documentation cache.
+      - uses: leanprover-community/docgen-action@dacc1acc2a3f532cc577266979ba9c36c7593f7c
+        with:
+          build-page: false
+          deploy: false
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docs/
+
+  # A separate job, so that a failed deployment can be re-run without building again.
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
