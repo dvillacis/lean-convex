@@ -69,7 +69,7 @@ Add the library to the `lakefile.toml` of a project that uses the same Lean tool
 [[require]]
 name = "convexanalysis"
 git = "https://github.com/dvillacis/lean-convex"
-rev = "v0.1.1"
+rev = "v0.1.2"
 ```
 
 and run
@@ -81,8 +81,7 @@ lake build
 ```
 
 At a tagged `rev`, Lake downloads the compiled library from the GitHub release instead of
-compiling it (Linux x86_64; from the next release on, also macOS arm64; on other platforms it
-is compiled locally). Mathlib comes as a transitive dependency.
+compiling it (Linux x86_64 and macOS arm64; on other platforms it is compiled locally). Mathlib comes as a transitive dependency.
 
 ## Contents
 

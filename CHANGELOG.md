@@ -6,10 +6,13 @@ All notable changes to this library are recorded here. The format follows
 
 | Version | Lean toolchain | Mathlib |
 |---|---|---|
+| 0.1.2 | `v4.33.1` | `v4.33.1` |
 | 0.1.1 | `v4.33.1` | `v4.33.1` |
 | 0.1.0 | `v4.33.1` | `v4.33.1` |
 
 ## [Unreleased]
+
+## [0.1.2] - 2026-11-25
 
 ### Added
 
@@ -53,6 +56,7 @@ First tagged release: the port of the 36 OptLib files (theory and algorithms) an
 files to Mathlib `v4.33.1`, with the six upstream `sorry`s proved, and 6 added files. See
 `PORTING.md`.
 
-[Unreleased]: https://github.com/dvillacis/lean-convex/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/dvillacis/lean-convex/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/dvillacis/lean-convex/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/dvillacis/lean-convex/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dvillacis/lean-convex/releases/tag/v0.1.0

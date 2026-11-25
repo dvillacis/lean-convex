@@ -11,8 +11,8 @@ abstract: >-
 authors:
   - family-names: Villacís
     given-names: David
-version: 0.1.1
-date-released: 2026-11-24
+version: 0.1.2
+date-released: 2026-11-25
 license: Apache-2.0
 repository-code: "https://github.com/dvillacis/lean-convex"
 url: "https://david.villacis.net/lean-convex/docs/"
