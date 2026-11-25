@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025  Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
+Copyright (c) 2025 Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
+Authors: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
 -/
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.LinearAlgebra.Dual.Basis
@@ -36,7 +36,10 @@ section aux_structure
 Affine maps below an extended real-value function on a set `s`.
 Purpose: to give a more precise geometric understanding of closed functions.
 -/
+/-- An affine minorant of `f` on `s`: an affine map `h : E →ᵃ[ℝ] ℝ` with `h x ≤ f x` for all
+`x ∈ s`. -/
 structure affine_minorant (s : Set E) (f : E → EReal) where
+  /-- The affine map lying below `f` on `s`. -/
   h : E →ᵃ[ℝ] ℝ
   hlw : ∀ x ∈ s, h x ≤ f x
 
@@ -160,6 +163,8 @@ Let `f` be a proper, convex, closed function on a convex set `s`.
 `h₂` is one of the affine minorants of `f`.
 Purpose: choose and fix an affine minorant of `f`.
 -/
+/-- An arbitrarily chosen affine minorant of `f` on `s`, for `f` proper, convex and closed on `s`
+(it exists by `Nonempty_affine_minorant`). -/
 noncomputable def h₂ [hsf : ProperFunction s f] (hf : ConvexOn ℝ s f)
     (hfcl : f.IsClosed s) : affine_minorant s f :=
   @Classical.ofNonempty _ (Nonempty_affine_minorant hsf hf hfcl)

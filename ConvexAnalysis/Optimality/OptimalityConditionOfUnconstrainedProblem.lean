@@ -8,15 +8,23 @@ import Mathlib.Analysis.Calculus.MeanValue
 import Mathlib.Analysis.InnerProductSpace.Positive
 import ConvexAnalysis.Convex.ConvexFunction
 
+/-!
+# First-order optimality conditions for unconstrained problems
+
+This file defines descent directions (`DescentDirection`) of a function `f : E → ℝ` with gradient
+`f'` and proves that there is no descent direction at a global minimizer
+(`optimal_no_descent_direction`), that the gradient vanishes at a global minimizer
+(`first_order_unconstrained`), and that for convex `f` a point is a global minimizer if and only if
+the gradient vanishes there (`first_order_convex`, `first_order_convex_iff`).
+-/
+
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable {x xm : E} {f : E → ℝ} {f' : E → E} {s : Set E}
 
 open Set InnerProductSpace
 
-/-
-  A vector d is considered a descent direction at a point x if the inner product of the gradient at
-  x with d is less than zero.
--/
+/-- A vector `d` is a descent direction of `f` at `x` if the inner product of the gradient `f' x`
+with `d` is negative: `⟪f' x, d⟫ < 0`. -/
 def DescentDirection (d : E) (x : E) (_ : HasGradientAt f (f' x) x) : Prop :=
   inner ℝ (f' x) d < (0 : ℝ)
 
@@ -73,7 +81,7 @@ theorem optimal_no_descent_direction (hf : ∀ x : E, HasGradientAt f (f' x) x)
       use (ts • T)
       constructor
       · simp; apply le_trans
-        · show -T ≤ 0
+        · change -T ≤ 0
           linarith
         · simp [hT1]; linarith
       · constructor

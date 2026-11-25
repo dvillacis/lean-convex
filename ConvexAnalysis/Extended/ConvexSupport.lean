@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 The Reaslib authors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Reaslib authors
+-/
 import Mathlib.Order.LiminfLimsup
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Topology.Defs.Filter
@@ -15,6 +20,17 @@ import ConvexAnalysis.Extended.AffineMinorant
 import ConvexAnalysis.Extended.ConvexConjugate
 import ConvexAnalysis.Extended.ConvexIndicator
 import ConvexAnalysis.Extended.IntrinsicInterior
+
+/-!
+# Support function of a set
+
+This file defines the support function `Set.convex_support` of a set `s` as the convex conjugate
+of its indicator function `s.convex_indicator`. The main results are that it is proper, convex and
+lower semicontinuous (`convex_support_is_proper_of_nonempty`, `convex_support_convex_of_convex`,
+`convex_support_lowerSemicontinuous_of_closed`), the characterization `convex_support_congr_iff`
+of the equality of two support functions, and the relation between positively homogeneous
+functions and support functions (`closure_eq_conjugate_of_positive_homogeneous_of_convex_ne_top`).
+-/
 
 
 open Filter BigOperators Set Topology Inner Function Module EReal
@@ -34,6 +50,8 @@ section convex_support
 --   haveI := Classical.decPred (· ∈ s)
 --   if x ∈ s then 0 else ⊤
 
+/-- The support function of the set `s`: the convex conjugate over `univ` of the indicator
+function `s.convex_indicator`. -/
 noncomputable def Set.convex_support {α : Type*} [NormedAddCommGroup α] [InnerProductSpace ℝ α]
     (s : Set α) : α →  EReal :=
   convex_conjugate univ s.convex_indicator
@@ -127,7 +145,6 @@ theorem set_bounded_of_convex_support_bounded_aux {s : Set α}
     rw [coe_toReal (LT.lt.ne_top (lt_of_eq_of_lt h₃_1 hy2)) (LT.lt.ne_bot hy1)]
     simp; rw [real_inner_comm]
     exact le_iSup_iff.mpr fun b a ↦ a y
-
   · obtain ⟨hy1, hy2⟩ := hy (-x)
     rw [← h₃_2] at hy1
     use M.toReal

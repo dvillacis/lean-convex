@@ -10,11 +10,21 @@ import ConvexAnalysis.Function.Lsmooth
 import ConvexAnalysis.Convex.StronglyConvex
 import ConvexAnalysis.Function.MinimaClosedFunction
 
+/-!
+# Proximal operator
+
+This file defines the proximal property `prox_prop`, the proximal set `prox_set` and the proximal
+points `prox_point`, `prox_point_c` and `prox_point_c'` of a function `f : E → ℝ`.
+
+The main results are the existence of proximal points (`prox_set_compact_of_lowersemi`,
+`prox_set_compact_of_convex`, `prox_well_define`, `prox_well_define_convex`), uniqueness for convex
+functions (`prox_unique_of_convex`), the calculus rules `proximal_shift`, `proximal_scale`,
+`proximal_add_linear` and `proximal_add_sq`, and the characterizations `prox_iff_subderiv` and
+`prox_iff_grad`.
+-/
+
 set_option linter.unusedVariables false
 
-/-!
- proximal operator
--/
 noncomputable section
 
 open Set InnerProductSpace Topology Filter
@@ -22,20 +32,17 @@ open Set InnerProductSpace Topology Filter
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable {x y y₁ y₂ : E} {s : Set E} {f : E → ℝ}
 
-/-
-  a point satisfies the proximal property if it is a minimizer of the function f(u)+1/2‖u-x‖²
--/
+/-- The proximal property: `xm` satisfies it for `f` at `x` if `xm` is a minimizer of
+`u ↦ f u + ‖u - x‖² / 2` over the whole space. -/
 def prox_prop (f : E → ℝ) (x : E) (xm : E) : Prop :=
   IsMinOn (fun u ↦ f u + ‖u - x‖ ^ 2 / 2) univ xm
 
-/-
-  the set of all points that satisfy the proximal property
--/
+/-- The proximal set of `f` at `x`: the set of minimizers of `u ↦ f u + ‖u - x‖² / 2`, i.e. of
+all points that satisfy the proximal property `prox_prop f x`. -/
 def prox_set (f : E → ℝ) (x : E) : Set E := {u | prox_prop f x u}
 
-/-
-  if the proximal set is nonempty then we can choose the point that satisfies the proximal property
--/
+/-- A proximal point of `f` at `x`: a point of `prox_set f x` chosen by `Classical.choose` from
+the hypothesis `h` that the proximal set is nonempty. -/
 def prox_point (f : E → ℝ) (x : E) (h : ∃ y, prox_set f x y) : E :=
   Classical.choose h
 
@@ -120,7 +127,7 @@ theorem prox_set_compact_of_lowersemi (f : E → ℝ) (hc : LowerSemicontinuous 
     let p := fun c ↦ (((fun n ↦ xn n) ∘ k) c, (g ∘ xn ∘ k) c)
     have pnin :  ∀ c : ℕ, p c ∈ epi := by intro c; simp [epi, p]
     apply IsClosed.isSeqClosed epi_closed pnin
-    show Tendsto (fun c ↦ (((fun n ↦ xn n) ∘ k) c, (g ∘ xn ∘ k) c)) atTop (𝓝 (x', sInf ImS))
+    change Tendsto (fun c ↦ (((fun n ↦ xn n) ∘ k) c, (g ∘ xn ∘ k) c)) atTop (𝓝 (x', sInf ImS))
     apply Tendsto.prodMk_nhds cxk cfxk
   have minima_ieq : g x' ≤ sInf ImS := inepi
   have minima : ∀ w : E, g x' ≤ g w := by
@@ -260,7 +267,7 @@ theorem prox_set_compact_of_convex (f : E → ℝ) (hc : ContinuousOn f univ)
     let p := fun c ↦ (((fun n ↦ xn n) ∘ k) c, (g ∘ xn ∘ k) c)
     have pnin :  ∀ c : ℕ, p c ∈ epi := by intro c; simp [epi, p]
     apply IsClosed.isSeqClosed epi_closed pnin
-    show Tendsto (fun c ↦ (((fun n ↦ xn n) ∘ k) c, (g ∘ xn ∘ k) c)) atTop (𝓝 (x', sInf ImS))
+    change Tendsto (fun c ↦ (((fun n ↦ xn n) ∘ k) c, (g ∘ xn ∘ k) c)) atTop (𝓝 (x', sInf ImS))
     apply Tendsto.prodMk_nhds cxk cfxk
   have minima_ieq : g x' ≤ sInf ImS := inepi
   have minima : ∀ w : E, g x' ≤ g w := by
@@ -316,15 +323,16 @@ theorem prox_well_define_convex (f : E → ℝ) (hc : ContinuousOn f univ)
   rcases (prox_set_compact_of_convex f hc hconv x).1 with ⟨y, yprop⟩
   use y; simp [prox_set] at yprop; exact yprop
 
-/-
-  the definition of the proximal operator for a closed convex function
--/
+/-- A proximal point of `f` at `x` for `f` lower semicontinuous and bounded below: a point of
+`prox_set f x`, chosen by `Classical.choose` from `prox_well_define`. -/
 def prox_point_c (f : E → ℝ) (x : E) (hc : LowerSemicontinuous f)
     (lbdf : BddBelow (f '' univ)) : E :=
   have h : ∃ y, prox_set f x y := by
     apply prox_well_define f hc lbdf x
   Classical.choose h
 
+/-- A proximal point of `f` at `x` for `f` continuous and convex on the whole space: a point of
+`prox_set f x`, chosen by `Classical.choose` from `prox_well_define_convex`. -/
 def prox_point_c' (f : E → ℝ) (x : E) (hc : ContinuousOn f univ)
     (hconv : ConvexOn ℝ univ f) : E :=
   have h : ∃ y, prox_set f x y := by
@@ -356,7 +364,7 @@ theorem prox_unique_of_convex (f : E → ℝ) (x : E) (hfun : ConvexOn ℝ univ 
 /-
    The square of norm is convex on a convex set
 -/
-lemma convex_of_norm_sq {s : Set E} (x : E) (conv: Convex ℝ s) :
+lemma convex_of_norm_sq {s : Set E} (x : E) (conv : Convex ℝ s) :
     ConvexOn ℝ s (fun (u : E) ↦ ‖u - x‖ ^ 2 / 2) := by
   rw [ConvexOn]; use conv
   intro y _ z _ a b anneg bnneg absum1
@@ -398,7 +406,7 @@ lemma Subderivat_eq_SubderivWithinAt_univ (f : E → ℝ) :
 /-
   relation of proximal between a function and its shift
 -/
-theorem proximal_shift (a : E) {t : ℝ} (tnz : t ≠ 0) (f : E → ℝ):
+theorem proximal_shift (a : E) {t : ℝ} (tnz : t ≠ 0) (f : E → ℝ) :
     ∀ z : E, prox_prop (fun x ↦ f (t • x + a)) x z ↔
       prox_prop (t ^ 2 • f) (t • x + a) (t • z + a) := by
   intro z
@@ -425,7 +433,7 @@ theorem proximal_shift (a : E) {t : ℝ} (tnz : t ≠ 0) (f : E → ℝ):
 /-
   relation of proximal between a function and its scale
 -/
-theorem proximal_scale {t : ℝ} (tpos : 0 < t) (f : E → ℝ):
+theorem proximal_scale {t : ℝ} (tpos : 0 < t) (f : E → ℝ) :
     ∀ z : E, prox_prop (fun x ↦ t • f (t⁻¹ • x)) x z ↔
       prox_prop (t⁻¹ • f) (t⁻¹ • x) (t⁻¹ • z) := by
   intro z
@@ -455,7 +463,7 @@ theorem proximal_scale {t : ℝ} (tpos : 0 < t) (f : E → ℝ):
 /-
   change of proximal when added a linear components
 -/
-theorem proximal_add_linear (a : E) (f : E → ℝ):
+theorem proximal_add_linear (a : E) (f : E → ℝ) :
     ∀ z : E, prox_prop (fun x ↦ f x + inner ℝ a x) x z ↔
       prox_prop f (x - a) z := by
   intro z
@@ -476,7 +484,7 @@ theorem proximal_add_linear (a : E) (f : E → ℝ):
 /-
   change of proximal when added a square components
 -/
-theorem proximal_add_sq (a : E) {l : ℝ} (lpos : 0 < l) (f : E → ℝ):
+theorem proximal_add_sq (a : E) {l : ℝ} (lpos : 0 < l) (f : E → ℝ) :
     ∀ z : E, prox_prop (fun x ↦ f x + l / 2 * ‖x - a‖ ^ 2) x z ↔
       prox_prop ((1 / (l + 1)) • f) ((1 / (l + 1)) • (x + l • a)) z := by
   intro z
@@ -512,7 +520,7 @@ section
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
-variable {s : Set E} {f : E → ℝ} {u x: E} {t : ℝ}
+variable {s : Set E} {f : E → ℝ} {u x : E} {t : ℝ}
 
 /-
   u minimize the proximal at x iff x - u is subgradient
@@ -523,9 +531,9 @@ theorem prox_iff_subderiv (f : E → ℝ) (hfun : ConvexOn ℝ univ f) :
   let g := fun u ↦ ‖u - x‖ ^ 2 / 2
   have hg : ConvexOn ℝ Set.univ g := by apply convex_of_norm_sq x (convex_univ)
   have hcg : ContinuousOn g univ := by
-    show ContinuousOn (fun u ↦ ‖u - x‖ ^ 2 / 2) univ
+    change ContinuousOn (fun u ↦ ‖u - x‖ ^ 2 / 2) univ
     fun_prop
-  show 0 ∈ SubderivAt (f + g) u ↔ x - u ∈ SubderivAt f u
+  change 0 ∈ SubderivAt (f + g) u ↔ x - u ∈ SubderivAt f u
   have : SubderivAt (f + g) u = SubderivAt (g + f) u := by
     unfold SubderivAt; ext z; rw [Set.mem_ofPred, Set.mem_ofPred];
     constructor

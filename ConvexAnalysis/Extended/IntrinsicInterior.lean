@@ -1,15 +1,13 @@
 /-
 Copyright (c) 2025 Pengfei Hao, Yuhao Jiang, Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Pengfei Hao, Yuhao Jiang, Zichen Wang, Chenyi Li
 -/
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Geometry.Convex.Cone.Basic
 import Mathlib.Geometry.Convex.Cone.Pointed
 import Mathlib.Analysis.Convex.Join
-
-set_option linter.style.whitespace true
-
 
 /-!
 # Intrinsic Interior, Closure, and Related Properties of Convex Sets
@@ -26,6 +24,8 @@ and the intrinsic closure coincides with the topological closure under certain c
 * Chapter 6 of [R. T. Rockafellar, *Convex Analysis*][rockafellar1970].
 -/
 
+set_option linter.style.whitespace true
+
 open AffineSubspace Set
 
 open scoped Pointwise
@@ -40,6 +40,8 @@ variable (𝕜) [Ring 𝕜] [AddCommGroup V] [Module 𝕜 V] [AddTorsor V P]
 Given a nonempty set s, it defines an isomorphism
 between the affine span and its direction
 -/
+/-- For a nonempty set `s` with chosen point `p = hs.choose`, the bijection `x ↦ x -ᵥ p` from
+`affineSpan 𝕜 s` onto its direction, with inverse `v ↦ v +ᵥ p`. -/
 @[simp]
 def affSpanEquiv {s : Set P} (hs : s.Nonempty) :
     affineSpan 𝕜 s ≃ (affineSpan 𝕜 s).direction where
@@ -78,6 +80,8 @@ variable (𝕜) [Ring 𝕜] [AddCommGroup V] [Module 𝕜 V] [TopologicalSpace V
 /-
 This defines an affine span equivalence between a set s in the vector space V and its direction.
 -/
+/-- The bijection `affSpanEquiv 𝕜 hs` between `affineSpan 𝕜 s` and its direction, as a
+homeomorphism. -/
 @[simp]
 def affSpanDirEquiv
     {s : Set V} (hs : s.Nonempty) :
@@ -92,6 +96,8 @@ def affSpanDirEquiv
 It is a function that maps affine space elements to the vector space V.
 This is prepared for defining **affSpanCoerce**
 -/
+/-- The map `v ↦ v + hs.choose` from the direction of `affineSpan 𝕜 s` into `V`: the inverse of
+`affSpanDirEquiv 𝕜 hs` followed by the inclusion of `affineSpan 𝕜 s` into `V`. -/
 @[simp]
 def affSpanCoerce_pre' {s : Set V} (hs : s.Nonempty) :=
   ((↑) : (affineSpan 𝕜 s) → V) ∘ (affSpanDirEquiv 𝕜 hs).symm
@@ -139,6 +145,8 @@ lemma eq_image_preimage {s : Set V} (hs : s.Nonempty) :
 /-
 This defines a linear map from the direction of the affine span of s back to the vector space V.
 -/
+/-- The map `affSpanCoerce_pre' 𝕜 hs` from the direction of `affineSpan 𝕜 s` into `V`, as an
+affine map; its linear part is the inclusion of the direction into `V`. -/
 def affSpanCoerce_pre {s : Set V} (hs : s.Nonempty) :
     (affineSpan 𝕜 s).direction →ᵃ[𝕜] V where
   toFun := affSpanCoerce_pre' 𝕜 hs
@@ -213,6 +221,8 @@ variable (𝕜) [NontriviallyNormedField 𝕜] [NormedAddCommGroup V] [NormedSpa
 This defines an affine map (affineMap)
 from the direction of the affine span of s to the vector space V.
 -/
+/-- The affine map `affSpanCoerce_pre 𝕜 hs` from the direction of `affineSpan 𝕜 s` into `V`, as
+an affine isometry. -/
 def affSpanCoerce {s : Set V} (hs : s.Nonempty) :
     (affineSpan 𝕜 s).direction →ᵃⁱ[𝕜] V :=
       .mk (affSpanCoerce_pre 𝕜 hs) (by simp [affSpanCoerce_pre])
@@ -319,6 +329,8 @@ theorem affineSpan_of_product_space [NontriviallyNormedField R] [NormedAddCommGr
       (m, n), mem_vectorSpan_prod_of_mem_part hm hn ⟨a, ha⟩ ⟨b, hb⟩,
       Prod.eq_iff_fst_eq_snd_eq.2 ⟨hx, hy⟩⟩
 
+/-- The homeomorphism between the subtype `{c : X × Y // p c.1 ∧ q c.2}` and the product
+`{a // p a} × {b // q b}`. -/
 def Homeomorph.subtypeProd {X Y : Type*}
     [TopologicalSpace X] [TopologicalSpace Y] {p : X → Prop} {q : Y → Prop} :
     { c : X × Y // p c.1 ∧ q c.2 } ≃ₜ { a // p a } × { b // q b } where
@@ -335,47 +347,37 @@ theorem intrinsicInterior_prod_eq_prod_intrinsicInterior [NontriviallyNormedFiel
     [NormedAddCommGroup α] [NormedSpace R α] [NormedAddCommGroup β] [NormedSpace R β]
     (M : Set α) (N : Set β) :
     intrinsicInterior R (M ×ˢ N) = (intrinsicInterior R M) ×ˢ (intrinsicInterior R N) := by
-
   by_cases neM : ¬M.Nonempty
   · rw [not_nonempty_iff_eq_empty.mp neM]; simp
   push Not at neM
   by_cases neN : ¬N.Nonempty
   · rw [not_nonempty_iff_eq_empty.mp neN]; simp
   push Not at neN
-
   /- Subtype Homeomorph -/
-
   let phiM' : (affineSpan R M) → α := (↑)
   let phiN' : (affineSpan R N) → β := (↑)
   let phi' : (affineSpan R (M ×ˢ N)) → α × β := (↑)
-
   let subtype := { x // x ∈ affineSpan R (M ×ˢ N)}
   let subtypeM := { x : α // x ∈ affineSpan R M }
   let subtypeN := { y : β // y ∈ affineSpan R N }
-
   have affSpan_iff (x) : (fun x ↦ x ∈ affineSpan R (M ×ˢ N)) x ↔
       (fun x ↦ (x.1 ∈ affineSpan R M) ∧ (x.2 ∈ affineSpan R N)) (Homeomorph.refl (α × β) x) := by
     simp; repeat rw [← AffineSubspace.mem_coe]
     rw [affineSpan_of_product_space, Set.mem_prod]
-
   let eqv1 := Homeomorph.subtype (p := (fun x ↦ x ∈ affineSpan R (M ×ˢ N)))
     (q := (fun x ↦ (x.1 ∈ affineSpan R M) ∧ (x.2 ∈ affineSpan R N))) (X := α × β) (Y := α × β)
     (Homeomorph.refl (α × β)) affSpan_iff
   let eqv2 : { x : α × β // x.1 ∈ affineSpan R M ∧ x.2 ∈ affineSpan R N } ≃ₜ
     { x : α // x ∈ affineSpan R M } × { y : β // y ∈ affineSpan R N } := Homeomorph.subtypeProd
   let eqv : subtype ≃ₜ subtypeM × subtypeN := eqv1.trans eqv2
-
   /- Homeomorph Equation -/
-
   have eqv1_eq (x) : eqv1.invFun x = ⟨(Homeomorph.refl (α × β)).toEquiv.symm x,
       by simp; apply (affSpan_iff x).mpr; simp; exact And.intro x.property.1 x.property.2⟩ := by
     apply Subtype.coe_eq_of_eq_mk
     simp; unfold eqv1
     apply Homeomorph.subtype_symm_apply_coe
   have eqv2_eq (x) : eqv2.invFun x = ⟨⟨x.1.1, x.2.1⟩, ⟨x.1.2, x.2.2⟩⟩ := rfl
-
   /- Calculation -/
-
   have preimage_phi'_eq: phi' ⁻¹' (M ×ˢ N) = eqv.symm '' {a : subtypeM | a.val ∈ M} ×ˢ
       {b : subtypeN | b.val ∈ N} := by
     calc
@@ -390,16 +392,11 @@ theorem intrinsicInterior_prod_eq_prod_intrinsicInterior [NontriviallyNormedFiel
         rw [eqv2_eq x, eqv1_eq]
         simp
         rfl
-
-
   change phi' '' interior (phi' ⁻¹' (M ×ˢ N)) = (phiM' '' interior (phiM' ⁻¹' M)) ×ˢ
     (phiN' '' interior (phiN' ⁻¹' N))
-
   rw [preimage_phi'_eq, ← Homeomorph.image_interior, interior_prod_eq]
-
   change _ = (phiM' '' interior {x : subtypeM | x.val ∈ M})
     ×ˢ (phiN' '' interior {x : subtypeN | x.val ∈ N})
-
   rw [prod_image_image_eq, image_image]
   apply image_congr
   intro x _
@@ -661,18 +658,13 @@ lemma intrinsicInterior_forall_exist_of_intrinsicInterior {z : V}
   rw [intrinsicInterior_equiv_pre ℝ hs] at hz
   let h := affSpanCoerce_pre ℝ hs
   let g := Function.invFun h
-
   have hgu (u) : g '' (h '' u) = u :=  Function.LeftInverse.image_image
     (Function.leftInverse_invFun <| affSpanCoerce_pre_Injective ℝ hs) u
-
   have hx' : g z ∈ interior (h ⁻¹' s) := by
     rw [← hgu (interior (h ⁻¹' s))]
     exact mem_image_of_mem g hz
-
   have hgx : h (g x) = x := inv_eq_self' ℝ hs <| sub_range ℝ hs hx
-
   have hgz : h (g z) = z := inv_eq_self' ℝ hs <| mem_range_of_mem_image _ _ hz
-
   have ⟨μ ,hu1, hu⟩:= prolongation_of_interior' hx' (g x)
   use μ ,hu1
   have : h ((1 - μ) • g x + μ • g z) ∈ h '' (⇑h ⁻¹' s) := mem_image_of_mem _ hu
@@ -683,7 +675,6 @@ lemma intrinsicInterior_of_intrinsicClosure_of_intrinsicInterior {x z : V}
     (hu : (1 - μ) • x + μ • z ∈ intrinsicClosure ℝ s) :
     z ∈ intrinsicInterior ℝ s := by
   let y := (1 - μ) • x + μ • z
-
   let t := 1 / μ
   have hz : z = (1 - t) • x + t • y := by
     simp [y, t, ← add_assoc, sub_smul, sub_smul, smul_sub, smul_smul]
@@ -861,19 +852,14 @@ lemma in_affineSpan_openSegment {x y : V} (h : x ≠ y) :
   refine (mem_coe ..).mp ?_
   simp [affineSpan, spanPoints]
   simp [vectorSpan]
-
   let u := midpoint 𝕜 x y
-
   have hu : u ∈ openSegment 𝕜 x y :=
     mem_openSegment_of_ne_left_right (by simpa [u]) (by simpa [u])
       (midpoint_mem_segment x y)
-
   let z := midpoint 𝕜 x u
-
   have seg : segment 𝕜 x u ⊆ segment 𝕜 x y := by
     simpa [u] using  Convex.segment_subset  (convex_segment x y)
       (left_mem_segment 𝕜 x y) (midpoint_mem_segment x y)
-
   have hz : z ∈ openSegment 𝕜 x y := by
     refine mem_openSegment_of_ne_left_right (by simpa [z, u]) ?_ (seg <| midpoint_mem_segment x u)
     simp [z, u, midpoint_eq_smul_add]
@@ -882,7 +868,6 @@ lemma in_affineSpan_openSegment {x y : V} (h : x ≠ y) :
     rw [← sub_smul]
     norm_num
     exact h.symm
-
   let v := z -ᵥ u
   have hv : v ∈ Submodule.span 𝕜 (openSegment 𝕜 x y -ᵥ openSegment 𝕜 x y) :=
     Submodule.subset_span (vsub_mem_vsub hz hu)
@@ -895,7 +880,6 @@ lemma in_affineSpan_openSegment {x y : V} (h : x ≠ y) :
     refine mem_openSegment_iff_div.mpr ?_
     use (3 : 𝕜), (1 : 𝕜)
     norm_num
-
   use u + (x - z), huz, v, hv
   simp [v]
   rw [add_sub, add_sub, ← add_assoc, sub_add]
@@ -921,7 +905,6 @@ lemma intrinsicClosure_openSegment {x y : V} (hn : x ≠ y) :
     use x - Exists.choose hs, b
     symm
     exact (eq_vadd_iff_vsub_eq x _ _).mpr rfl
-
   have hgy : h (g y) = y := by
     apply inv_eq_self' 𝕜 hs
     simp
@@ -932,19 +915,14 @@ lemma intrinsicClosure_openSegment {x y : V} (hn : x ≠ y) :
     use y - Exists.choose hs, b
     symm
     exact (eq_vadd_iff_vsub_eq y _ _).mpr rfl
-
   have : openSegment 𝕜 x y = h '' (openSegment 𝕜 (g x) (g y)) := by
     simp_rw [image_openSegment 𝕜 _ (g x) (g y), hgx, hgy]
-
   have : h ⁻¹' openSegment 𝕜 x y = openSegment 𝕜 (g x) (g y) := by
     simp_rw [this]
     apply preimage_image_eq _
     exact affSpanCoerce_pre_Injective 𝕜 hs
-
   change y ∈ h '' (closure (h ⁻¹' _))
-
   simp_rw [this]
-
   apply (image_mono segment_subset_closure_openSegment)
   use (g y), right_mem_segment 𝕜 (g x) (g y), hgy
 
@@ -1038,7 +1016,8 @@ For convex sets s and t in finite-dimensional space, the following are equivalen
 2. ri(s) = ri(t)
 3. ri(s) ⊆ t ⊆ cl(s)
 -/
-theorem intrinsicInterior_tfae {t : Set V} [FiniteDimensional ℝ V] (hs : Convex ℝ s) (ht : Convex ℝ t) :
+theorem intrinsicInterior_tfae {t : Set V} [FiniteDimensional ℝ V] (hs : Convex ℝ s)
+    (ht : Convex ℝ t) :
     [closure s = closure t, intrinsicInterior ℝ s = intrinsicInterior ℝ t,
     intrinsicInterior ℝ s ⊆ t ∧ t ⊆ closure s].TFAE :=  by
   tfae_have  1 → 2 := by
@@ -1674,12 +1653,14 @@ end Thm_6_7
 
 section Thm_6_8
 
+/-- The first projection `WithLp 2 (M × N) → M` as a linear map. -/
 def LinearMap.fst_WithLp2 (M N : Type*) [NormedAddCommGroup M] [NormedSpace ℝ M]
     [NormedAddCommGroup N] [NormedSpace ℝ N] : WithLp 2 (M × N) →ₗ[ℝ] M where
   toFun := WithLp.fst
   map_add' _ _ := rfl
   map_smul' _ _ := rfl
 
+/-- The first projection `WithLp 2 (M × N) → M` as a continuous linear map. -/
 noncomputable def ContinuousLinearMap.fst_WithLp2 (M N : Type*)
     [NormedAddCommGroup M] [NormedSpace ℝ M]
     [NormedAddCommGroup N] [NormedSpace ℝ N] :
@@ -1691,8 +1672,11 @@ noncomputable def ContinuousLinearMap.fst_WithLp2 (M N : Type*)
 Theorem 6.8.
 -/
 
+/-- The image of `{x}` under `C ⊆ E × F` seen as a relation: the slice `{z | (x, z) ∈ C}`. -/
 def Cy {E F} (C : Set (E × F)) (x : E) := SetRel.image C {x}
+/-- The set `{x} × F` in `E × F`. -/
 def M {E F} (x : E) : Set (E × F) := {x} ×ˢ univ
+/-- The projection of `C ⊆ E × F` onto `E`: the image of `C` under `Prod.fst`. -/
 def D {E F : Type*} (C : Set (E × F)) : Set E := Prod.fst '' C
 
 lemma D_eq_projection {E F : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -1880,6 +1864,7 @@ theorem mem_intrinsicInterior_prod_convexCone_iff {C : Set E}
          fun h => ⟨h.1, hCyt k h.1 ▸ intrinsicInterior_of_left_smul_constant hC _ ▸ h.2⟩⟩
 
 universe u_1 u_2 u_4 in
+/-- The pointed cone `C ∪ {0}` obtained by adding the origin to a convex cone `C`. -/
 def ConvexCone.addPoint {R : Type u_2} {M : Type u_4} [Semiring R] [PartialOrder R]
     [IsOrderedRing R] [AddCommMonoid M] [Module R M] (C : ConvexCone R M) : PointedCone R M where
   carrier := C.carrier ∪ {0}
@@ -1917,6 +1902,8 @@ theorem ConvexCone.mem_toCone_addPoint {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜
 
 universe u_1 u_4 in
 set_option linter.deprecated false in
+/-- The convex cone `hs.toCone s ∪ {0}`: the cone generated by the convex set `s`, together with
+the origin. -/
 def Convex.toCone_Point {𝕜 : Type u_1} {M : Type u_4} [Field 𝕜] [LinearOrder 𝕜]
     [IsStrictOrderedRing 𝕜] [AddCommGroup M] [Module 𝕜 M]
     (s : Set M) (hs : Convex 𝕜 s) : ConvexCone 𝕜 M where
@@ -2078,6 +2065,8 @@ lemma mem_of_convexHull {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrde
     [AddCommGroup M] [Module 𝕜 M] (s : Set M) {x} (hx : x ∈ s) :
     x ∈ convexHull 𝕜 s := mem_convexHull_iff.mpr fun _ a _ ↦ a hx
 
+/-- A convex set `s` that is closed under multiplication by positive scalars, as a convex
+cone. -/
 def Convex.smul_mem_mk_ConvexCone {𝕜} {M} [Field 𝕜] [LinearOrder 𝕜] [IsStrictOrderedRing 𝕜]
     [AddCommGroup M] [Module 𝕜 M] (s : Set M) (hs : Convex 𝕜 s)
     (h₁ : ∀ ⦃c : 𝕜⦄, 0 < c → ∀ ⦃x : M⦄, x ∈ s → c • x ∈ s) : ConvexCone 𝕜 M :=
@@ -2157,21 +2146,17 @@ theorem intrinsicInterior_convexHull_iUnion_eq' (a b : Set E)
     intrinsicInterior ℝ (convexHull ℝ (a ∪ b)) =
     ⋃ s ∈ {(m, n) | (m > 0) ∧ (n > 0) ∧ m + n = (1:ℝ)},
     (s.1 • intrinsicInterior ℝ a + s.2 • intrinsicInterior ℝ b) := by
-
   let ab := convexHull ℝ (a ∪ b)
   have convex_ab := (convex_convexHull ℝ (a ∪ b))
   have ne_ab : ab.Nonempty := Nonempty.convexHull (Nonempty.inr hneb)
-
   let Ca := {((1:ℝ), z) | z ∈ a}
   let Cb := {((1:ℝ), z) | z ∈ b}
   let Cab := {((1:ℝ), z) | z ∈ ab}
   have convex_Ca : Convex ℝ Ca:= (convex_prod_singleton ha 1)
   have convex_Cb : Convex ℝ Cb:= (convex_prod_singleton hb 1)
-
   let Ka: ConvexCone ℝ (ℝ × E) := (convex_Ca.toCone_Point Ca)
   let Kb: ConvexCone ℝ (ℝ × E) := (convex_Cb.toCone_Point Cb)
   let Kab := ((convex_prod_singleton convex_ab 1).toCone_Point Cab)
-
   have K_sum := by calc
     Kab = convexHull ℝ (Ka ∪ Kb : Set (ℝ × E)) := by
       unfold Kab; rw [Convex.toCone_Pointed_convexHull]; simp; congr; unfold Cab Ca Cb ab;
@@ -2179,7 +2164,6 @@ theorem intrinsicInterior_convexHull_iUnion_eq' (a b : Set E)
     _ = Ka + Kb := by rw [Convex.convexCone_union _ _
       (Convex.toCone_Point_pointed Ca convex_Ca) ((Convex.toCone_Point_pointed Cb convex_Cb))
       (Convex.toCone_Point_nonempty Ca convex_Ca) (Convex.toCone_Point_nonempty Cb convex_Cb)]
-
   change intrinsicInterior ℝ ab = _; ext x; calc
     _ ↔ (1, x) ∈ intrinsicInterior ℝ (Kab:Set (ℝ × E)) := by
       rw [mem_intrinsicInterior_prod_convexCone_iff' convex_ab ne_ab (K := Kab) rfl,
@@ -2188,7 +2172,6 @@ theorem intrinsicInterior_convexHull_iUnion_eq' (a b : Set E)
       rw [K_sum, ← intrinsicInterior_sum_eq (ConvexCone.convex Ka) (ConvexCone.convex Kb)]
   rw [@mem_add, mem_intrinsicInterior_prod_convexCone_iff' ha hnea (K := Ka) rfl,
       mem_intrinsicInterior_prod_convexCone_iff' hb hneb (K := Kb) rfl]
-
   constructor
   · rintro ⟨p, hp, q, hq, hpq⟩; simp
     refine ⟨p.1, q.1, ⟨hp.1, hq.1, (Prod.eq_iff_fst_eq_snd_eq.mp hpq).1⟩, ?_⟩

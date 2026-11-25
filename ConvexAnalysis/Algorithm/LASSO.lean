@@ -7,8 +7,6 @@ import Mathlib.LinearAlgebra.Matrix.DotProduct
 import Mathlib.Analysis.CStarAlgebra.Matrix
 import ConvexAnalysis.Algorithm.ProximalGradient
 
-set_option linter.unusedVariables false
-
 /-!
 # LASSO
 
@@ -18,6 +16,9 @@ set_option linter.unusedVariables false
   of the Lasso problem using proximal gradient method.
 
 -/
+
+set_option linter.unusedVariables false
+
 section property
 
 variable {n m : ℕ+} {t μ : ℝ}
@@ -46,7 +47,7 @@ lemma mulVec_sub (u v : Fin n → ℝ) : A *ᵥ u - A *ᵥ v = A *ᵥ (u - v) :=
 
 /- `‖x‖₂ ^ 2 = x ⬝ x` for x in EuclideanSpace -/
 
-lemma norm2eq_dot (x :  EuclideanSpace ℝ (Fin m)) : ‖x‖₂ ^ 2 = x ⬝ᵥ x := by
+lemma norm2eq_dot (x : EuclideanSpace ℝ (Fin m)) : ‖x‖₂ ^ 2 = x ⬝ᵥ x := by
   rw [EuclideanSpace.norm_eq, Real.sq_sqrt, dotProduct]
   · apply Finset.sum_congr rfl
     intro z _; simp [pow_two]
@@ -182,7 +183,7 @@ theorem norm_one_proximal
   have geqth : g = t • h := by
     ext z; rw [Pi.smul_apply]; simp [g]; rw [lasso]; simp; rw [mul_assoc]
   rw [← geqth]
-  show prox_prop ((t * μ) • (fun (x : EuclideanSpace ℝ (Fin n)) => ‖x‖₁)) x xm
+  change prox_prop ((t * μ) • (fun (x : EuclideanSpace ℝ (Fin n)) => ‖x‖₁)) x xm
   have tμpos : 0 < t * μ := by
     apply mul_pos; linarith [tpos]; linarith [μpos]
   rw [prox_iff_subderiv_smul (fun x : (EuclideanSpace ℝ (Fin n)) => ‖x‖₁) norm_one_convex tμpos]
@@ -261,11 +262,27 @@ local notation "‖" x "‖₁" => (Finset.sum Finset.univ (fun (i : Fin n) => �
 open Set Real Matrix Finset NNReal
 
 
-structure LASSO (A : Matrix (Fin m) (Fin n) ℝ) (b : (Fin m) → ℝ) (μ : ℝ) (μpos : 0 < μ) (Ane0 : A ≠ 0)
-    (x₀ : (EuclideanSpace ℝ (Fin n))) where
-  (f h : (EuclideanSpace ℝ (Fin n)) → ℝ)
+/-- The proximal gradient method for the LASSO problem `min (1 / 2) * ‖A x - b‖₂ ^ 2 + μ * ‖x‖₁`,
+started at `x₀`: a gradient step `y k = x k - t • f' (x k)` with `t = 1 / L` followed by the
+soft thresholding `x (k + 1) i = sign (y k i) * max (|y k i| - t * μ) 0`. -/
+structure LASSO (A : Matrix (Fin m) (Fin n) ℝ) (b : (Fin m) → ℝ) (μ : ℝ) (μpos : 0 < μ)
+    (Ane0 : A ≠ 0) (x₀ : (EuclideanSpace ℝ (Fin n))) where
+  /-- The smooth part of the objective, `f x = (1 / 2) * ‖A x - b‖₂ ^ 2`. -/
+  (f : (EuclideanSpace ℝ (Fin n)) → ℝ)
+  /-- The nonsmooth part of the objective, `h y = μ * ‖y‖₁`. -/
+  (h : (EuclideanSpace ℝ (Fin n)) → ℝ)
+  /-- The gradient of `f`, `f' x = Aᵀ (A x - b)`. -/
   (f' : (EuclideanSpace ℝ (Fin n)) → (EuclideanSpace ℝ (Fin n)))
-  (L : ℝ≥0) (t : ℝ) (xm : (EuclideanSpace ℝ (Fin n))) (x y : ℕ → (EuclideanSpace ℝ (Fin n)))
+  /-- The constant `L = ‖Aᵀ A‖₊`, the operator norm of `Aᵀ A`. -/
+  (L : ℝ≥0)
+  /-- The step size, `t = 1 / L`. -/
+  (t : ℝ)
+  /-- A minimizer of `f + h`. -/
+  (xm : (EuclideanSpace ℝ (Fin n)))
+  /-- The sequence of iterates. -/
+  (x : ℕ → (EuclideanSpace ℝ (Fin n)))
+  /-- The points `y k = x k - t • f' (x k)` obtained from the gradient steps. -/
+  (y : ℕ → (EuclideanSpace ℝ (Fin n)))
   (feq : f = fun x : (EuclideanSpace ℝ (Fin n)) => (1 / 2) * ‖A *ᵥ x - b‖₂ ^ 2)
   (f'eq : f' = fun x : (EuclideanSpace ℝ (Fin n)) => WithLp.toLp 2 (Aᵀ *ᵥ (A *ᵥ x - b)))
   (heq : h = fun y => μ • ‖y‖₁) (teq : t = 1 / L)

@@ -42,17 +42,21 @@ noncomputable section
 variable {E : Type _} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable {τ σ : Finset ℕ}
 
-/-
-  the definition of an unconstrained optimization problem.
-  The objective function is a function from a Hilbert space to ℝ.
-  The equality constraints are a set of functions from a Hilbert space to ℝ.
-  The inequality constraints are a set of functions from a Hilbert space to ℝ.
--/
+/-- A constrained optimization problem on `E`: minimize `objective x` over `x ∈ domain` subject to
+`equality_constraints i x = 0` for `i ∈ τ` and `inequality_constraints j x ≥ 0` for `j ∈ σ`, where
+`τ` and `σ` are disjoint finite index sets of natural numbers. -/
 structure Constrained_OptimizationProblem (E : Type _) (τ σ : Finset ℕ) where
+  /-- The set on which the problem is posed. -/
   (domain : Set E)
+  /-- The equality constraint functions `cᵢ : E → ℝ`; only those with `i ∈ τ` are imposed,
+  as `cᵢ x = 0`. -/
   (equality_constraints : (i : ℕ) → E → ℝ)
+  /-- The inequality constraint functions `cⱼ : E → ℝ`; only those with `j ∈ σ` are imposed,
+  as `cⱼ x ≥ 0`. -/
   (inequality_constraints : (j : ℕ) → E → ℝ)
+  /-- The index sets of the equality and of the inequality constraints are disjoint. -/
   (eq_ine_not_intersect : τ ∩ σ = ∅)
+  /-- The objective function `f : E → ℝ`. -/
   (objective : E → ℝ)
 
 namespace Constrained_OptimizationProblem
@@ -61,83 +65,66 @@ variable {p : Constrained_OptimizationProblem E τ σ} {x : E}
 
 open Topology InnerProductSpace Set Filter Tendsto
 
-/-
-  The feasible point is a point that satisfies all the constraints.
--/
+/-- `point` is feasible: it lies in the domain and satisfies all the constraints, i.e.
+`cᵢ point = 0` for `i ∈ τ` and `cⱼ point ≥ 0` for `j ∈ σ`. -/
 def FeasPoint (point : E) : Prop :=
   point ∈ p.domain ∧ (∀ i ∈ τ, p.equality_constraints i point = 0)
   ∧ (∀ j ∈ σ, p.inequality_constraints j point ≥ 0)
 
-/-
-  The feasible set is the set that satisfies all the constraints. Denote the set as Ω
--/
+/-- The feasible set `Ω`: the set of all feasible points of the problem. -/
 def FeasSet : Set E :=
   {point | p.FeasPoint point}
 
-/-
-  A point x₁ ∈ Ω is a global minimizer if f x₁ ≤ f x for all x ∈ Ω.
--/
+/-- `point` is a global minimizer: it is feasible and `f point ≤ f x` for all `x` in the feasible
+set `Ω`, where `f` is the objective. -/
 def Global_Minimum (point : E) : Prop :=
   (p.FeasPoint point) ∧ IsMinOn p.objective p.FeasSet point
 
-/-
-  A point x₁ ∈ Ω is a global maximizer if f x₁ ≥ f x for all x ∈ Ω.
--/
+/-- `point` is a global maximizer: it is feasible and `f point ≥ f x` for all `x` in the feasible
+set `Ω`, where `f` is the objective. -/
 def Global_Maximum (point : E) : Prop :=
   (p.FeasPoint point) ∧ IsMaxOn p.objective p.FeasSet point
 
-/-
-  A point x₁ ∈ Ω is a local minimizer if there is a neighborhood B of x₁
-  such that f x₁ ≤ f x for all x ∈ B ∩ Ω.
--/
+/-- `point` is a local minimizer: it is feasible and there is a neighborhood `B` of `point`
+such that `f point ≤ f x` for all `x ∈ B ∩ Ω`. -/
 def Local_Minimum (point : E) : Prop :=
   (p.FeasPoint point) ∧ IsLocalMinOn p.objective p.FeasSet point
 
-/-
-  A point x₁ ∈ Ω is a local maximizer if there is a neighborhood B of x₁
-  such that f x₁ ≥ f x for all x ∈ B ∩ Ω.
--/
+/-- `point` is a local maximizer: it is feasible and there is a neighborhood `B` of `point`
+such that `f point ≥ f x` for all `x ∈ B ∩ Ω`. -/
 def Local_Maximum (point : E) : Prop :=
   (p.FeasPoint point) ∧ IsLocalMaxOn p.objective p.FeasSet point
 
-/-
-  A vector x∗ is a strict local solution (also called a strong local solution) if x∗ ∈ Ω and there
-  is a neighborhood B of x∗ such that f (x) > f (x∗) for all x ∈ B ∩ Ω with x ≠ x∗.
--/
+/-- As stated in Lean: `point` is feasible and there is `ε > 0` such that
+`f point > f y` for every feasible `y ≠ point` in the open ball of radius `ε` around `point`,
+where `f` is the objective. -/
 def Strict_Local_Minimum (point : E) : Prop :=
   (p.FeasPoint point) ∧ (∃ ε > 0, ∀ y, p.FeasPoint y → y ∈ Metric.ball point ε → y ≠ point
   → p.objective point > p.objective y)
 
-/-
-  The active set A(x) at any feasible x consists of the equality constraint indices from E
-  together with the indices of the inequality constraints i for which c_i(x) = 0;
--/
+/-- The active set `A(point)`: the equality constraint indices `τ` together with the indices
+`i ∈ σ` of the inequality constraints for which `cᵢ point = 0`. -/
 def active_set (point : E) : Finset ℕ :=
   τ ∪ σ.filter fun i : ℕ ↦ p.inequality_constraints i point = (0 : ℝ)
 
 omit [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E] in
 lemma equality_constraint_active_set (point : E) : τ ⊆ p.active_set point :=
   fun i itau ↦ Finset.mem_union_left _ itau
-/-
-  Given a feasible point x and the active constraint set A(x) of Definition 12.1, the set of
-  linearized feasible directions is defined as
--/
+/-- The set of linearized feasible directions at `point`: the vectors `v` with
+`⟪∇cᵢ point, v⟫ = 0` for all `i ∈ τ` and `⟪∇cⱼ point, v⟫ ≥ 0` for all active `j ∈ σ`. -/
 def linearized_feasible_directions (point : E) : Set E :=
   {v | (∀ i ∈ τ, ⟪gradient (p.equality_constraints i) point, v⟫_ℝ = (0 : ℝ))
     ∧ ∀ j ∈ σ ∩ (p.active_set point), ⟪gradient (p.inequality_constraints j) point, v⟫_ℝ ≥ (0 : ℝ)}
 
-/-
-  Given the point x and the active set A(x), we say that the linear
-  independence constraint qualification (LICQ) holds if the set of active constraint gradients
-  {∇ci(x), i ∈ A(x)} is linearly independent.
--/
+/-- The linear independence constraint qualification (LICQ) holds at `point` if the family of
+active constraint gradients `∇cᵢ point`, `i ∈ A(point)`, is linearly independent. -/
 def LICQ (point : E) : Prop :=
   LinearIndependent ℝ (fun i : p.active_set point ↦
-    if i.1 ∈ τ then gradient (p.equality_constraints i.1) point else gradient (p.inequality_constraints i.1) point)
+    if i.1 ∈ τ then gradient (p.equality_constraints i.1) point
+    else gradient (p.inequality_constraints i.1) point)
 
-/-
-  Lagrangian function for the general problem
--/
+/-- The Lagrangian function of the problem:
+`L(x, λ₁, λ₂) = f x - ∑ i : τ, λ₁ i * cᵢ x - ∑ j : σ, λ₂ j * cⱼ x`. -/
 def Lagrange_function :=
   fun (x : E) (lambda1 : τ → ℝ) (lambda2 : σ → ℝ) ↦ (p.objective x)
     - (Finset.sum Finset.univ fun i ↦ (lambda1 i) * p.equality_constraints i x)
@@ -147,6 +134,7 @@ section linear
 
 variable {E : Type _} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 
+/-- `f` is affine: there are `a : E` and `b : ℝ` with `f x = ⟪x, a⟫ + b` for all `x`. -/
 def IsLinear (f : E → ℝ) : Prop := ∃ a, ∃ b, f = fun x ↦ (inner ℝ x a : ℝ) + b
 
 lemma IsLinear_iff (f : E → ℝ) : IsLinear f ↔ ∃ a b, f = fun x ↦ (inner ℝ x a : ℝ) + b := by rfl
@@ -157,9 +145,8 @@ lemma IsLinear_iff' (f : E → ℝ) : IsLinear f ↔ ∃ a b, f = fun x ↦ (inn
 
 end linear
 
-/-
-  Linear Constraint Qualification
--/
+/-- The linear constraint qualification holds at `point` if every active constraint function at
+`point`, equality or inequality, is affine in the sense of `IsLinear`. -/
 def LinearCQ (point : E) : Prop :=
   (∀ i ∈ (p.active_set point ∩ τ), IsLinear (p.equality_constraints i)) ∧
   ∀ i ∈ (p.active_set point ∩ σ), IsLinear (p.inequality_constraints i)
@@ -195,8 +182,8 @@ theorem linearized_feasible_directions_convex (point : E) :
     intro j jsigma
     rw [inner_add_right, real_inner_smul_right, real_inner_smul_right]
     apply add_nonneg
-    . apply mul_nonneg ha (h₁ j jsigma)
-    . apply mul_nonneg hb (h₂ j jsigma)
+    · apply mul_nonneg ha (h₁ j jsigma)
+    · apply mul_nonneg hb (h₂ j jsigma)
 
 lemma posTangentCone_localmin_inner_pos {f : E → ℝ} {loc : E} (hl : IsLocalMinOn f p.FeasSet loc)
     (hf : DifferentiableAt ℝ f loc) :
@@ -220,26 +207,26 @@ theorem linearized_feasible_directions_contain_tagent_cone (xf : x ∈ p.FeasSet
     intro i itau
     rw [IsLocalMinOn, IsMinFilter, Filter.eventually_iff_exists_mem]
     use p.FeasSet; constructor
-    . use univ; constructor
+    · use univ; constructor
       simp; use p.FeasSet; constructor
       simp; exact Eq.symm (univ_inter FeasSet)
-    . intro y yf
+    · intro y yf
       rw [FeasSet] at yf xf
       rw [(yf.2.1 i itau), (xf.2.1 i itau)]
   have negimin : ∀ i ∈ τ, IsLocalMinOn (-equality_constraints p i) p.FeasSet x := by
     intro i itau
     rw [IsLocalMinOn, IsMinFilter, Filter.eventually_iff_exists_mem]
     use p.FeasSet; constructor
-    . use univ; constructor
+    · use univ; constructor
       simp; use p.FeasSet; constructor
       simp; exact Eq.symm (univ_inter FeasSet)
-    . intro y yf; simp
+    · intro y yf; simp
       rw [FeasSet] at yf xf
       rw [(yf.2.1 i itau), (xf.2.1 i itau)]
-  . intro i itau
+  · intro i itau
     apply ge_antisymm
-    . apply posTangentCone_localmin_inner_pos (imin i itau) (diffable i itau) v hv
-    . rw [← neg_neg (inner ℝ (gradient (equality_constraints p i) x) v)]
+    · apply posTangentCone_localmin_inner_pos (imin i itau) (diffable i itau) v hv
+    · rw [← neg_neg (inner ℝ (gradient (equality_constraints p i) x) v)]
       apply neg_nonpos_of_nonneg
       rw [← inner_neg_left]
       have a₁ : ∀ i ∈ τ, DifferentiableAt ℝ (-equality_constraints p i) x :=
@@ -252,24 +239,24 @@ theorem linearized_feasible_directions_contain_tagent_cone (xf : x ∈ p.FeasSet
         exact DifferentiableAt.hasGradientAt (diffable i itau)
       rw [a₂]
       apply posTangentCone_localmin_inner_pos (negimin i itau) (a₁ i itau) v hv
-  . intro j hj jact
+  · intro j hj jact
     rw [active_set] at jact; simp at jact
     rcases jact with jtau | jsigma
-    . have := p.eq_ine_not_intersect
+    · have := p.eq_ine_not_intersect
       rw [Finset.ext_iff] at this
       simp at this
       have jns : j ∉ σ := by apply this j jtau
       tauto
-    . rcases jsigma with ⟨js, ineq⟩
+    · rcases jsigma with ⟨js, ineq⟩
       have jmin : ∀ i ∈ σ , (inequality_constraints p i x = 0) →
           IsLocalMinOn (inequality_constraints p i) p.FeasSet x := by
         intro i is inezero
         rw [IsLocalMinOn, IsMinFilter, Filter.eventually_iff_exists_mem]
         use p.FeasSet; constructor
-        . use univ; constructor
+        · use univ; constructor
           simp; use p.FeasSet; constructor
           simp; exact Eq.symm (univ_inter FeasSet)
-        . intro y yf
+        · intro y yf
           rw [FeasSet] at yf xf
           rw [inezero]
           apply yf.2.2 i is
@@ -620,7 +607,8 @@ lemma LICQ_strictfderiv_Ax_elem {x : EuclideanSpace ℝ (Fin n)}
       gradient (p.equality_constraints i) z else gradient (p.inequality_constraints i) z))
     (A : EuclideanSpace ℝ (Fin n) → Matrix (p.active_set x) (Fin n) ℝ)
     (Aeq : A = fun z ↦ (fun i ↦ (gradc z i).ofLp))
-    (Jz : EuclideanSpace ℝ (Fin n) → EuclideanSpace ℝ (Fin n) →L[ℝ] EuclideanSpace ℝ (p.active_set x))
+    (Jz : EuclideanSpace ℝ (Fin n) →
+      EuclideanSpace ℝ (Fin n) →L[ℝ] EuclideanSpace ℝ (p.active_set x))
     (Jzeq : Jz = fun z ↦ (LinearMap.toContinuousLinearMap (toEuclideanLin (A z))))
     (conte : ∀ i ∈ τ, ContDiffAt ℝ (1 : ℕ) (equality_constraints p i) x)
     (conti : ∀ i ∈ σ, ContDiffAt ℝ (1 : ℕ) (inequality_constraints p i) x) :
@@ -727,7 +715,7 @@ lemma comap1 {x : EuclideanSpace ℝ (Fin n)} {m : ℕ}
         _ = a := by field_simp
     exact ha zin'
 
-lemma comap2 (hv : v ≠ 0):
+lemma comap2 (hv : v ≠ 0) :
     comap (fun z : EuclideanSpace ℝ (Fin n) ↦ if (‖z‖ = 0) then v else ‖z‖⁻¹ • (z - v))
     (𝓝 0) ≤ 𝓝 v := by
   rw [Filter.le_def]; intro s smem; simp only [mem_comap]
@@ -780,10 +768,12 @@ lemma LICQ_tendsto {x : EuclideanSpace ℝ (Fin n)} {m N : ℕ}
   have eq1 : ((fun x' ↦ ‖x' - x‖⁻¹ * ‖Rz x' - Rz x - Mx (x' - x)‖) ∘ d) =
       fun i : ℕ ↦ ‖d i - x‖⁻¹ * ‖Rz (d i) - Rz x - Mx (d i - x)‖ := by ext i; simp
   have eq2 : (fun i : ℕ ↦ ‖d i - x‖⁻¹ * ‖Rz (d i) - Rz x - Mx (d i - x)‖) =
-      fun i : ℕ ↦ ‖d i - x‖⁻¹ * ‖Rz (d i) - Rt (1 / (i : ℝ)) - Rz x - Mx (d i - x - (1 / (i : ℝ)) • v)‖ := by
+      fun i : ℕ ↦ ‖d i - x‖⁻¹ *
+        ‖Rz (d i) - Rt (1 / (i : ℝ)) - Rz x - Mx (d i - x - (1 / (i : ℝ)) • v)‖ := by
     ext i; rw [Rteq]; simp; left
     rw [sub_right_comm _ _ (Rz x), sub_sub (Rz (d i) - Rz x), add_comm, sub_add_cancel]
-  have eq3 : (fun i : ℕ ↦ ‖d i - x‖⁻¹ * ‖Rz (d i) - Rt (1 / (i : ℝ)) - Rz x - Mx (d i - x - (1 / (i : ℝ)) • v)‖)
+  have eq3 : (fun i : ℕ ↦ ‖d i - x‖⁻¹ *
+        ‖Rz (d i) - Rt (1 / (i : ℝ)) - Rz x - Mx (d i - x - (1 / (i : ℝ)) • v)‖)
       =ᶠ[atTop] (fun i : ℕ ↦ ‖d i - x‖⁻¹ * ‖Mx (d i - x - (1 / (i : ℝ)) • v)‖)  := by
     rw [EventuallyEq, eventually_atTop]; use N
     intro i igeN; specialize hfd i igeN
@@ -824,13 +814,11 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
     (x : EuclideanSpace ℝ (Fin n)) (xf : x ∈ p.FeasSet)
     (conte : ∀ i ∈ τ, ContDiffAt ℝ (1 : ℕ) (equality_constraints p i) x)
     (conti : ∀ i ∈ σ, ContDiffAt ℝ (1 : ℕ) (inequality_constraints p i) x)
-    (LIx : p.LICQ x) (hdomain : p.domain = univ):
+    (LIx : p.LICQ x) (hdomain : p.domain = univ) :
     p.linearized_feasible_directions x ⊆ posTangentConeAt p.FeasSet x := by
   intro v hv
-
   by_cases veq0 : v = 0
   · rw [veq0]; exact zero_mem_tangentConeAt (subset_closure xf)
-
   let gradc : EuclideanSpace ℝ (Fin n) → ((p.active_set x) → (EuclideanSpace ℝ (Fin n))) :=
     fun z ↦ (fun i ↦ if i.1 ∈ τ then gradient (p.equality_constraints i) z
       else gradient (p.inequality_constraints i) z) -- gradient of the constraints
@@ -842,7 +830,6 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
     apply LICQ_existZ x LIx; simp [m]; rfl
   rw [LICQ] at LIx;
   rcases existZ with ⟨Z, ⟨eq1, eq2⟩⟩
-
   let MZ : EuclideanSpace ℝ (Fin n) →L[ℝ] (Fin (n - m) → ℝ) :=
     LinearMap.toContinuousLinearMap
       ((Matrix.toLin' Zᵀ).comp (WithLp.linearEquiv 2 ℝ (Fin n → ℝ)).toLinearMap)
@@ -854,15 +841,17 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
       else (p.inequality_constraints i) z) -- the constraints
   let Rz : EuclideanSpace ℝ (Fin n) → EuclideanSpace ℝ (p.active_set x) × (Fin (n - m) → ℝ) :=
     fun z ↦ (WithLp.toLp 2 (c z), Zᵀ *ᵥ (z - x).ofLp) -- z part in R
-  let Rt : ℝ → EuclideanSpace ℝ (p.active_set x) × (Fin (n - m) → ℝ) := fun t ↦ t • Mx v -- t part in R
+  let Rt : ℝ → EuclideanSpace ℝ (p.active_set x) × (Fin (n - m) → ℝ) :=
+    fun t ↦ t • Mx v -- t part in R
   let A : EuclideanSpace ℝ (Fin n) → Matrix (p.active_set x) (Fin n) ℝ :=
     fun z ↦ (fun i ↦ (gradc z i).ofLp) -- compose the gradient matrix
-  let Jz : EuclideanSpace ℝ (Fin n) → EuclideanSpace ℝ (Fin n) →L[ℝ] EuclideanSpace ℝ (p.active_set x) :=
-    fun z ↦ (LinearMap.toContinuousLinearMap (toEuclideanLin (A z))) -- change the Jacobi into linear transformation
+  let Jz : EuclideanSpace ℝ (Fin n) →
+      EuclideanSpace ℝ (Fin n) →L[ℝ] EuclideanSpace ℝ (p.active_set x) :=
+    -- change the Jacobi into linear transformation
+    fun z ↦ (LinearMap.toContinuousLinearMap (toEuclideanLin (A z)))
   have cgrad_atx : Jz x = (LinearMap.toContinuousLinearMap (toEuclideanLin Ax)) := rfl -- A x = Ax
-
   have Rzgrad : HasStrictFDerivAt Rz Mx x := by
-    show HasStrictFDerivAt (fun z ↦ (WithLp.toLp 2 (c z), Zᵀ *ᵥ (z - x).ofLp))
+    change HasStrictFDerivAt (fun z ↦ (WithLp.toLp 2 (c z), Zᵀ *ᵥ (z - x).ofLp))
       ((LinearMap.toContinuousLinearMap (Matrix.toEuclideanLin Ax)).prod MZ) x
     apply HasStrictFDerivAt.prodMk
     · rw [← cgrad_atx, hasStrictFDerivAt_euclidean]
@@ -871,14 +860,13 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
           fun y ↦ MZ y - MZ x := by
         ext y j; simp [MZ_apply, Matrix.mulVec_sub]
       rw [aux]; exact MZ.hasStrictFDerivAt.sub_const _
-
   have Rxeq0 : Rz x = 0 := by
     simp only [Rz, sub_self, WithLp.ofLp_zero, Matrix.mulVec_zero]
     refine Prod.ext ?_ rfl
     have xf' : p.FeasPoint x := xf
     obtain ⟨_, h12, _⟩ := xf'
     ext i
-    show c x i = 0
+    change c x i = 0
     by_cases h1 : i.1 ∈ τ
     · simp only [c, h1, if_true]; exact h12 i h1
     · simp only [c, h1, if_false]; have hi := i.2; unfold active_set at hi
@@ -887,7 +875,6 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
       · contrapose! h1; exact hi1
       rw [Finset.mem_filter] at hi2
       exact hi2.2
-
   have Mxinj : Mx.ker = ⊥ := by
     rw [LinearMap.ker_eq_bot']
     intro z Mzeq0
@@ -905,11 +892,9 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
     · simp only [Module.finrank_prod, finrank_euclideanSpace, Fintype.card_fin,
         Module.finrank_fin_fun, Fintype.card_coe]
       omega
-
   have implicit_f: ∃ (N : ℕ) (d : ℕ → EuclideanSpace ℝ (Fin n)), (∀ m ≥ N, Rz (d m) = Rt (1 / m)) ∧
       (Filter.Tendsto d atTop (𝓝 x)) :=
     LICQ_implicit_f v rfl Rxeq0 Rzgrad Mxsurj
-
   simp only [linearized_feasible_directions, Set.mem_ofPred_eq] at hv
   rcases hv with ⟨hvh1, hvh2⟩
   rcases implicit_f with ⟨N, d, hfd, dtend⟩
@@ -920,7 +905,6 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
   rw [tendsto_iff_norm_sub_tendsto_zero, NormedAddGroup.tendsto_nhds_zero] at dtend; simp at dtend
   obtain ⟨ε, εpos, inactive⟩ := LICQ_inactive_nhds x xf conti
   obtain ⟨N', dtendx⟩ := dtend ε εpos
-
   refine mem_posTangentConeAt_of_seq' (fun k : ℕ ↦ (k : ℝ)) (fun k ↦ d k - x) ?_
     tendsto_natCast_atTop_atTop ?_
   · rw [eventually_atTop]
@@ -929,7 +913,8 @@ theorem LICQ_linearized_feasible_directions_sub_posTangentCone
     specialize hfd nn (le_of_max_le_left hnn)
     have Axroweq : ∀ i : (p.active_set x), c (d nn) i = (nn : ℝ)⁻¹ * ⟪gradc x i, v⟫_ℝ := by
       intro i
-      have := congrArg (fun q : EuclideanSpace ℝ (p.active_set x) × (Fin (n - m) → ℝ) ↦ q.1.ofLp i) hfd
+      have := congrArg
+        (fun q : EuclideanSpace ℝ (p.active_set x) × (Fin (n - m) → ℝ) ↦ q.1.ofLp i) hfd
       change c (d nn) i = (1 / (nn : ℝ)) * (∑ j, Ax i j * v.ofLp j) at this
       rw [this, one_div]; congr 1
       simp [Ax, PiLp.inner_apply, mul_comm]
@@ -960,7 +945,7 @@ theorem LICQ_linearized_feasible_directions_eq_posTangentCone
     (x : EuclideanSpace ℝ (Fin n)) (xf : x ∈ p.FeasSet)
     (conte : ∀ i ∈ τ, ContDiffAt ℝ (1 : ℕ) (equality_constraints p i) x)
     (conti : ∀ i ∈ σ, ContDiffAt ℝ (1 : ℕ) (inequality_constraints p i) x)
-    (LIx : p.LICQ x) (hdomain : p.domain = univ):
+    (LIx : p.LICQ x) (hdomain : p.domain = univ) :
     p.linearized_feasible_directions x = posTangentConeAt p.FeasSet x := by
   have diffable : ∀ i ∈ τ, DifferentiableAt ℝ (equality_constraints p i) x :=
     diffable_of_hasgradient_nhds conte
@@ -1017,14 +1002,16 @@ lemma subtype_sum (σ τ : Finset ℕ) (f : σ → EuclideanSpace ℝ (Fin n))
   apply Finset.sum_eq_zero feq0
   apply Finset.disjoint_sdiff_inter σ τ
 
-theorem first_order_neccessary_general (p1 : Constrained_OptimizationProblem (EuclideanSpace ℝ (Fin n)) τ σ)
+theorem first_order_neccessary_general
+    (p1 : Constrained_OptimizationProblem (EuclideanSpace ℝ (Fin n)) τ σ)
     (loc : EuclideanSpace ℝ (Fin n)) (hl : p1.Local_Minimum loc)
     (hf : Differentiable ℝ p1.objective)
     (conte : ∀ i ∈ τ, ContDiffAt ℝ (1 : ℕ) (equality_constraints p1 i) loc)
     (conti : ∀ i ∈ σ, ContDiffAt ℝ (1 : ℕ) (inequality_constraints p1 i) loc)
     (h : p1.linearized_feasible_directions loc = posTangentConeAt p1.FeasSet loc) :
     p1.FeasPoint loc ∧ (∃ (lambda1 : τ → ℝ) (lambda2 : σ → ℝ),
-    (gradient (fun m ↦ (p1.Lagrange_function m lambda1 lambda2)) loc = 0) ∧ (∀ j : σ, lambda2 j ≥ 0) ∧
+    (gradient (fun m ↦ (p1.Lagrange_function m lambda1 lambda2)) loc = 0) ∧
+    (∀ j : σ, lambda2 j ≥ 0) ∧
     (∀ j : σ, (lambda2 j) * (p1.inequality_constraints j loc) = 0)) := by
   constructor
   · exact hl.1
@@ -1092,14 +1079,16 @@ theorem first_order_neccessary_general (p1 : Constrained_OptimizationProblem (Eu
   Karush–Kuhn–Tucker conditions
   Numerical Optimization, Nocedal & Wright, Theorem 12.1
 -/
-theorem first_order_neccessary_LICQ (p1 : Constrained_OptimizationProblem (EuclideanSpace ℝ (Fin n)) τ σ)
+theorem first_order_neccessary_LICQ
+    (p1 : Constrained_OptimizationProblem (EuclideanSpace ℝ (Fin n)) τ σ)
     (loc : EuclideanSpace ℝ (Fin n)) (hl : p1.Local_Minimum loc)
     (hf : Differentiable ℝ p1.objective)
     (conte : ∀ i ∈ τ, ContDiffAt ℝ (1 : ℕ) (equality_constraints p1 i) loc)
     (conti : ∀ i ∈ σ, ContDiffAt ℝ (1 : ℕ) (inequality_constraints p1 i) loc)
     (hLICQ : p1.LICQ loc) (hdomain : p1.domain = univ) :
     p1.FeasPoint loc ∧ (∃ (lambda1 : τ → ℝ) (lambda2 : σ → ℝ),
-    (gradient (fun m ↦ (p1.Lagrange_function m lambda1 lambda2)) loc = 0) ∧ (∀ j : σ, lambda2 j ≥ 0) ∧
+    (gradient (fun m ↦ (p1.Lagrange_function m lambda1 lambda2)) loc = 0) ∧
+    (∀ j : σ, lambda2 j ≥ 0) ∧
     (∀ j : σ, (lambda2 j) * (p1.inequality_constraints j loc) = 0)) := by
   apply first_order_neccessary_general p1 loc hl hf conte conti
   apply LICQ_linearized_feasible_directions_eq_posTangentCone
@@ -1131,14 +1120,17 @@ theorem LinearCQ_linear_constraint_gradient_eq (x : EuclideanSpace ℝ (Fin n)) 
   exact (gradient_of_inner_const x a).gradient
 
 theorem LinearCQ_linear_constraint_ineq (x : EuclideanSpace ℝ (Fin n)) (Lx : p.LinearCQ x) :
-    ∀ i ∈ p.active_set x ∩ σ, ∃ a, ∃ b, (inequality_constraints p i) = fun y ↦ (inner ℝ a y : ℝ) + b := by
+    ∀ i ∈ p.active_set x ∩ σ, ∃ a, ∃ b,
+      (inequality_constraints p i) = fun y ↦ (inner ℝ a y : ℝ) + b := by
   intro i hi
   simp only [LinearCQ] at Lx
   obtain Lx := (Lx).2 i hi
   exact (IsLinear_iff' _).mp Lx
 
-theorem LinearCQ_linear_constraint_gradient_ineq (x : EuclideanSpace ℝ (Fin n)) (Lx : p.LinearCQ x) :
-    ∀ i ∈ p.active_set x ∩ σ, ∃ a, ∃ b, ((inequality_constraints p i) = fun y ↦ (inner ℝ a y : ℝ) + b) ∧
+theorem LinearCQ_linear_constraint_gradient_ineq (x : EuclideanSpace ℝ (Fin n))
+    (Lx : p.LinearCQ x) :
+    ∀ i ∈ p.active_set x ∩ σ, ∃ a, ∃ b,
+    ((inequality_constraints p i) = fun y ↦ (inner ℝ a y : ℝ) + b) ∧
     gradient (inequality_constraints p i) x = a := by
   intro i hi
   obtain ⟨a, b, hab⟩ := LinearCQ_linear_constraint_ineq x Lx i hi
@@ -1150,7 +1142,7 @@ theorem Linear_linearized_feasible_directions_eq_posTangentCone
     (x : EuclideanSpace ℝ (Fin n)) (xf : x ∈ p.FeasSet)
     (conte : ∀ i ∈ τ, ContDiffAt ℝ (1 : ℕ) (equality_constraints p i) x)
     (conti : ∀ i ∈ σ, ContDiffAt ℝ (1 : ℕ) (inequality_constraints p i) x)
-    (Lx : p.LinearCQ x) (hdomain : p.domain = univ):
+    (Lx : p.LinearCQ x) (hdomain : p.domain = univ) :
     p.linearized_feasible_directions x = posTangentConeAt p.FeasSet x := by
   have diffable : ∀ i ∈ τ, DifferentiableAt ℝ (equality_constraints p i) x :=
     diffable_of_hasgradient_nhds conte
@@ -1218,7 +1210,8 @@ theorem first_order_neccessary_LinearCQ
     (conti : ∀ i ∈ σ, ContDiffAt ℝ (1 : ℕ) (inequality_constraints p1 i) loc)
     (hLinearCQ : p1.LinearCQ loc) (hdomain : p1.domain = univ) :
     p1.FeasPoint loc ∧ (∃ (lambda1 : τ → ℝ) (lambda2 : σ → ℝ),
-    (gradient (fun m ↦ (p1.Lagrange_function m lambda1 lambda2)) loc = 0) ∧ (∀ j : σ, lambda2 j ≥ 0) ∧
+    (gradient (fun m ↦ (p1.Lagrange_function m lambda1 lambda2)) loc = 0) ∧
+    (∀ j : σ, lambda2 j ≥ 0) ∧
     (∀ j : σ, (lambda2 j) * (p1.inequality_constraints j loc) = 0)) := by
   apply first_order_neccessary_general p1 loc hl hf conte conti
   apply Linear_linearized_feasible_directions_eq_posTangentCone

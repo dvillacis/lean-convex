@@ -148,10 +148,17 @@ Every pull request is checked by CI (`.github/workflows/ci.yml`), which runs
 
 | Check | Command |
 |---|---|
-| Build, with no warnings from this package | `lake build` |
+| Build, with no warnings from this package (including Mathlib's style linters) | `lake build` |
 | The root file imports every module | `lake exe mk_all --check` (`lake exe mk_all` to fix) |
 | The statements of the main results and the README example are unchanged | `lake test`, `python3 scripts/check_readme.py` |
+| Every definition has a docstring | `lake env lean scripts/LintDocs.lean` |
 | No axiom beyond `propext`, `Classical.choice`, `Quot.sound` | `lake env lean scripts/AuditAxioms.lean` |
+
+Mathlib's standard set of style linters is enabled in `lakefile.toml`, except the two that
+would require rewriting the ported proofs (`linter.flexible`, `linter.style.multiGoal`). The
+ported theorems keep the names OptLib gave them, so Mathlib's naming conventions and the
+environment linters of Batteries are not enforced, and theorems are not required to have a
+docstring.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to propose a change.
 

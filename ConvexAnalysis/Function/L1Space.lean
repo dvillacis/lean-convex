@@ -12,7 +12,8 @@ import Mathlib.Analysis.InnerProductSpace.Basic
 In this file, we introduce the concept of the `l₁` space,
 specifically constructed over finite-dimensional real vector spaces,
 using the `PiLp` type with p = 1.
-This file contains several key definitions and theorems that involve continuous linear maps and their properties in this space.
+This file contains several key definitions and theorems that involve continuous linear maps and
+their properties in this space.
 
 ## Main Definitions
 
@@ -40,8 +41,8 @@ This file contains several key definitions and theorems that involve continuous 
 ∀ x ∈ α , x = ∑ aᵢbᵢ ,then we get l₁ norm by map σ which is ‖σ(x)‖=∑ ‖aᵢ‖ * ‖bᵢ‖
 -/
 
-/--The `l₁` space on `Fin n → ℝ`, defined using the `PiLp` construction.-/
-def l₁ (n : ℕ):= PiLp 1 (fun _ : Fin n => ℝ)
+/-- The `l₁` space on `Fin n → ℝ`, defined using the `PiLp` construction. -/
+def l₁ (n : ℕ) := PiLp 1 (fun _ : Fin n => ℝ)
 
 variable {α : Type*}
   [NormedAddCommGroup α] [InnerProductSpace ℝ α] [FiniteDimensional ℝ α]
@@ -50,10 +51,13 @@ open FiniteDimensional
 
 open scoped Pointwise Module
 
-/--A noncomputable function mapping basis vectors to the `l₁` space.-/
+/-- A noncomputable function mapping basis vectors to the `l₁` space. -/
 noncomputable def f : Fin (Module.finrank ℝ α) → PiLp 1 (fun _ : Fin (Module.finrank ℝ α) => ℝ) :=
   fun i => WithLp.toLp 1 (fun j => if i = j then ‖(Module.finBasis ℝ α) i‖ else 0)
 
+/-- The continuous linear map from `α` to the `l₁` space `PiLp 1 (fun _ : Fin (finrank ℝ α) => ℝ)`
+that sends the `i`-th vector `bᵢ` of `Module.finBasis ℝ α` to `f i`, i.e. to `‖bᵢ‖` times the
+`i`-th coordinate vector. -/
 noncomputable def σ := Module.Basis.constrL (Module.finBasis ℝ α) f
 
 theorem continuous_map_sigma : Continuous (σ (α := α)):= by exact ContinuousLinearMap.continuous σ
@@ -69,7 +73,8 @@ theorem sigma_apply_basis (i : Fin (Module.finrank ℝ α)) :
   ext j
   simp[σ,f];
 
-theorem sigma_norm_apply : ∀ x , ∀ j , ∑ i  , (((Module.finBasis ℝ α).repr x) i) • σ ((Module.finBasis ℝ α) i) j
+theorem sigma_norm_apply : ∀ x , ∀ j ,
+    ∑ i  , (((Module.finBasis ℝ α).repr x) i) • σ ((Module.finBasis ℝ α) i) j
     = (((Module.finBasis ℝ α).repr x) j) * ‖(Module.finBasis ℝ α) j‖ := by
   intro x j
   nth_rw 2 [pi_eq_sum_univ ((Module.finBasis ℝ α).repr x)]
@@ -96,9 +101,11 @@ theorem sigma_decompose_apply : ∀ x , ∀ j , (σ x) j =
 For any element x in the vector space α, the norm of the image of x
 under the map σ can be expressed as a weighted sum.
 Specifically, it is the sum of the norms of the coefficients
-in the finite basis representation of x, each multiplied by the norm of the corresponding basis vector.
+in the finite basis representation of x, each multiplied by the norm of the corresponding basis
+vector.
 -/
-theorem l1_norm_eq : ∀ x , ‖σ x‖ =  ∑ i , ‖((Module.finBasis ℝ α).repr x) i‖ * ‖(Module.finBasis ℝ α) i‖ := by
+theorem l1_norm_eq : ∀ x ,
+    ‖σ x‖ =  ∑ i , ‖((Module.finBasis ℝ α).repr x) i‖ * ‖(Module.finBasis ℝ α) i‖ := by
   intro x
   rw[PiLp.norm_eq_of_nat 1 (by norm_num)]
   simp only [pow_one, Nat.cast_one, ne_eq, one_ne_zero, not_false_eq_true,
@@ -117,9 +124,10 @@ This set is the Minkowski sum of {x} and the union of scaled basis vectors
 b i, including both positive and negative scalings.
 -/
 local notation "b" => (Module.finBasis ℝ α)
-theorem l1Ball_sub_convexHull{x : α}{r : ℝ}(hr : r > 0)(hn : Module.finrank ℝ α ≠ 0):
+theorem l1Ball_sub_convexHull {x : α} {r : ℝ} (hr : r > 0) (hn : Module.finrank ℝ α ≠ 0) :
     σ.toFun ⁻¹' (Metric.ball (σ.toFun x) r) ⊆
-    convexHull ℝ (({x} : Set α) + ((⋃ i , {(r / ‖b i‖) • (b i)})  ∪  (⋃ i ,{- (r / ‖b i‖) • (b i)}))):= by
+    convexHull ℝ (({x} : Set α) +
+      ((⋃ i , {(r / ‖b i‖) • (b i)})  ∪  (⋃ i ,{- (r / ‖b i‖) • (b i)}))):= by
   intro x₀ hx₀
   simp[dist_eq_norm] at hx₀
   rw[← map_sub] at hx₀
@@ -134,18 +142,14 @@ theorem l1Ball_sub_convexHull{x : α}{r : ℝ}(hr : r > 0)(hn : Module.finrank �
   let ι₀ := Fin (n + 2)
   let w₀ := (b).equivFun (x₀ - x)
   have repr : ∑ i , w₀ i • b i = x₀ - x := Module.Basis.sum_equivFun b (x₀ - x)
-
   let w₁  : ι → ℝ := fun i => |(b).equivFun (x₀ - x) i| * ‖b i‖ / r
   let sum := ∑ i : ι, w₁ i
-
   have sum_pos : 1 - sum ≥ 0 := by
     simp only [sum,w₁,ge_iff_le, sub_nonneg]
     apply sum_le_r
-
   let w  : ι₀ → ℝ
     | ⟨i, hi⟩ =>
         if h : i < n then w₁ ⟨i , h⟩ else (1 - sum) / 2
-
   have lem_i {i : ℕ}(hi : i < n + 2)(h₁ : ¬i = n + 1)(h₂ : ¬i = n) : i < n:= by
       by_contra h₃;
       push Not at h₁ h₂ h₃;
@@ -164,7 +168,6 @@ theorem l1Ball_sub_convexHull{x : α}{r : ℝ}(hr : r > 0)(hn : Module.finrank �
         (r / ‖b ⟨i, lem_i hi h₁ h₂⟩‖) • (b ⟨i, lem_i hi h₁ h₂⟩)
       else ((SignType.sign ((b).equivFun (x₀ - x) ⟨i , lem_i hi h₁ h₂⟩))
       * (r / ‖b ⟨i, lem_i hi h₁ h₂⟩‖)) • (b ⟨i, lem_i hi h₁ h₂⟩)
-
   have hw₀ : ∀ (i : ι₀), 0 ≤ w i := by
     intro ⟨i,hi⟩
     by_cases h : i < n
@@ -184,8 +187,8 @@ theorem l1Ball_sub_convexHull{x : α}{r : ℝ}(hr : r > 0)(hn : Module.finrank �
     have : ∑ x : Fin n, w₁ x = sum := rfl
     rw[this]
     linarith
-
-  have hz : ∀ (i : ι₀), z i ∈ ((⋃ i , {(r / ‖b i‖) • (b i)})  ∪  (⋃ i ,{- (r / ‖b i‖) • (b i)})) := by
+  have hz : ∀ (i : ι₀), z i ∈
+      ((⋃ i , {(r / ‖b i‖) • (b i)})  ∪  (⋃ i ,{- (r / ‖b i‖) • (b i)})) := by
     intro ⟨i, hi⟩
     simp only [z]
     by_cases h₁ : i = n + 1
@@ -219,7 +222,6 @@ theorem l1Ball_sub_convexHull{x : α}{r : ℝ}(hr : r > 0)(hn : Module.finrank �
     intro i
     refine norm_ne_zero_iff.mpr ?_
     exact Module.Basis.ne_zero b i
-
   have hx : ∑ i : ι₀, w i • z i = x₀ - x := by
     rw[Fin.sum_univ_castSucc,Fin.sum_univ_castSucc]
     simp[w]
@@ -240,10 +242,12 @@ theorem l1Ball_sub_convexHull{x : α}{r : ℝ}(hr : r > 0)(hn : Module.finrank �
     have : w₁ i • ((SignType.sign ((b).equivFun (x₀ - x) i)) * (r / ‖b i‖)) = w₀ i := by
       simp only [smul_eq_mul, w₁, w₀]
       calc
-        _ = |(b).equivFun (x₀ - x) i| * (‖b i‖ / r) * (SignType.sign ((b).equivFun (x₀ - x) i)) * (r / ‖b i‖) := by
+        _ = |(b).equivFun (x₀ - x) i| * (‖b i‖ / r) *
+            (SignType.sign ((b).equivFun (x₀ - x) i)) * (r / ‖b i‖) := by
           rw[← mul_div]
           linarith
-        _ = ((SignType.sign ((b).equivFun (x₀ - x) i)) * |(b).equivFun (x₀ - x) i|) * ((‖b i‖ / r) * (r / ‖b i‖)) := by
+        _ = ((SignType.sign ((b).equivFun (x₀ - x) i)) * |(b).equivFun (x₀ - x) i|) *
+            ((‖b i‖ / r) * (r / ‖b i‖)) := by
           linarith
         _ = _ :=by
           rw[sign_mul_abs]
@@ -274,17 +278,19 @@ theorem sigma_is_injective : Function.Injective σ (α := α) := by
   change σ z = 0 at h
   rw[hz] at h
   simp at h
-  have hi :∀ i , (∑ x : Fin n, (bs.repr z) x • σ (bs x)) i = (bs.repr z) i * ‖(Module.finBasis ℝ α) i‖:= by
+  have hi :∀ i , (∑ x : Fin n, (bs.repr z) x • σ (bs x)) i =
+      (bs.repr z) i * ‖(Module.finBasis ℝ α) i‖:= by
     intro i
     simp only [WithLp.ofLp_sum, Finset.sum_apply, PiLp.smul_apply]
     rw[sigma_norm_apply]
-  show z = 0
+  change z = 0
   rw[hz]
   apply Fintype.sum_eq_zero (fun a => (bs.repr z) a • bs a)
   intro i
   rw[smul_eq_zero]
   left
-  have : ‖(Module.finBasis ℝ α) i‖ ≠ 0:= norm_ne_zero_iff.mpr $ Module.Basis.ne_zero (Module.finBasis ℝ α) i
+  have : ‖(Module.finBasis ℝ α) i‖ ≠ 0:=
+    norm_ne_zero_iff.mpr <| Module.Basis.ne_zero (Module.finBasis ℝ α) i
   have h1 : (bs.repr z) i * ‖(Module.finBasis ℝ α) i‖ = 0 := by
     simp only [bs]
     rw[← sigma_norm_apply z i, ← sigma_decompose_apply z i, h, PiLp.zero_apply]

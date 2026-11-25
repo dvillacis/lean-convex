@@ -90,8 +90,10 @@ private lemma geq_tendsto_zero {a x : ℝ} (ha : a < 0) (h : ∀ t < 0, t * x > 
 private lemma decompose_pn : ∀ (lam : τ → ℝ), ∃ (lamp lamn : ℕ → ℝ),
     ∀ i : τ, (0 ≤ lamp i) ∧ (0 ≤ lamn i) ∧ (lam i = (lamp i) - (lamn i)) := by
   intro lam
-  let lamp : ℕ → ℝ := fun j => if h : (j ∈ τ) then if _ : (0 ≤ lam ⟨j, h⟩) then lam ⟨j, h⟩ else 0 else 0
-  let lamn : ℕ → ℝ := fun j => if h : (j ∈ τ) then if _ : (0 ≤ lam ⟨j, h⟩) then 0 else -lam ⟨j, h⟩ else 0
+  let lamp : ℕ → ℝ := fun j =>
+    if h : (j ∈ τ) then if _ : (0 ≤ lam ⟨j, h⟩) then lam ⟨j, h⟩ else 0 else 0
+  let lamn : ℕ → ℝ := fun j =>
+    if h : (j ∈ τ) then if _ : (0 ≤ lam ⟨j, h⟩) then 0 else -lam ⟨j, h⟩ else 0
   use lamp; use lamn
   intro i
   by_cases hpos : 0 ≤ lam i
@@ -105,7 +107,7 @@ private lemma shift_sum (τ : Finset ℕ) (m : ℕ) (f : ℕ → EuclideanSpace 
   have eq : f = g ∘ h := by ext i j; simp [g, h]
   have aux : ∀ x ∈ τ, ∀ y ∈ τ, h x = h y → x = y := by
     intro x _ y _; simp [h]
-  show (∑ i : τ, f i) = (∑ i : (Finset.image h τ), g i); simp
+  change (∑ i : τ, f i) = (∑ i : (Finset.image h τ), g i); simp
   rw [Finset.sum_attach, Finset.sum_attach, Finset.sum_image aux, eq]; simp
 
 private lemma shift_not_in (τ : Finset ℕ) (m : ℕ) (hm : ∀ i : τ, i < m): m ∉ τ := by
@@ -116,7 +118,7 @@ private lemma mem_lt_m {m i : ℕ} {σ τ : Finset ℕ} (he : (τ ∪ σ).Nonemp
   intro iin; rw [hm]; apply Nat.lt_succ_of_le
   apply Finset.le_max' (τ ∪ σ) i iin
 
-private lemma exist_of_mem_shift {x m : ℕ} {τ : Finset ℕ}:
+private lemma exist_of_mem_shift {x m : ℕ} {τ : Finset ℕ} :
     x ∈ (Finset.image (fun x => x + m) τ) → ∃ a : τ, x = a + m := by
   simp; intro a ain eq; use a; use ain; rw [← eq]
 
@@ -332,7 +334,6 @@ theorem Farkas :
         apply Finset.sum_nonneg; intro i _
         obtain h1i := h1 i; obtain h2i := h32 i i.2; positivity
   linarith
-
   intro h; by_contra h1
   let S := {z | ∃ (lam : τ → ℝ), ∃ (mu : σ → ℝ), (∀ i, 0 ≤ mu i) ∧ z =
     Finset.sum univ (fun i ↦ lam i • a i) + Finset.sum univ (fun i ↦ mu i • b i)}
@@ -345,12 +346,12 @@ theorem Farkas :
     use (a1 • sx + b1 • sy)
     use (a1 • tx + b1 • ty)
     constructor
-    . show 0 ≤ (a1 • tx + b1 • ty)
+    · change 0 ≤ (a1 • tx + b1 • ty)
       apply add_nonneg; apply smul_nonneg
       apply le_of_lt anng; apply txcond
       apply smul_nonneg; apply le_of_lt bnng
       apply tycond
-    . rw [eqx, eqy, smul_add, smul_add]
+    · rw [eqx, eqy, smul_add, smul_add]
       simp
       rw [Finset.smul_sum, Finset.smul_sum, Finset.smul_sum, Finset.smul_sum]
       rw [add_assoc]; nth_rw 2 [add_comm]

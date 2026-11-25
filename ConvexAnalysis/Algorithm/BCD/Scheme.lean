@@ -59,25 +59,26 @@ variable {H : WithLp 2 (E × F) → ℝ} {x : E} {y : F} {z : WithLp 2 (E × F)}
 
 open Set Bornology Filter BigOperators Topology
 
-/- The gradient of the first component -/
+/-- The partial gradient of `H` in the first variable: the gradient of `t ↦ H (t, y)`. -/
 def grad_fst (H : WithLp 2 (E × F) → ℝ) (y : F) : E → E :=
   gradient (fun t ↦ H (WithLp.toLp 2 (t, y)))
 
-/- The gradient function of the second component -/
+/-- The map `(x, y) ↦ grad_fst H y x` on `E × F`. -/
 def grad_fun_fst (H : WithLp 2 (E × F) → ℝ) := fun (x, y) ↦ (grad_fst H y x)
 
-/- The gradient of the second component -/
+/-- The partial gradient of `H` in the second variable: the gradient of `t ↦ H (x, t)`. -/
 def grad_snd (H : WithLp 2 (E × F) → ℝ) (x : E) : F → F :=
   gradient (fun t ↦ H (WithLp.toLp 2 (x, t)))
 
-/- The gradient function of the second component -/
+/-- The map `(x, y) ↦ grad_snd H x y` on `E × F`. -/
 def grad_fun_snd (H : WithLp 2 (E × F) → ℝ) := fun (x, y) ↦ (grad_snd H x y)
 
-/- The gradient of the prod domain -/
+/-- The vector `(grad_fst H z.snd z.fst, grad_snd H z.fst z.snd)` of the two partial gradients
+of `H` at `z`, as an element of `WithLp 2 (E × F)`. -/
 def grad_comp (H : WithLp 2 (E × F) → ℝ) (z : WithLp 2 (E × F)) : WithLp 2 (E × F) :=
     WithLp.toLp 2 (grad_fst H z.snd z.fst, grad_snd H z.fst z.snd)
 
-/- The gradient function of the prod domain -/
+/-- The map `z ↦ grad_comp H z`. -/
 def grad_fun_comp (H : WithLp 2 (E × F) → ℝ) := fun z ↦ (grad_comp H z)
 
 omit [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
@@ -86,7 +87,8 @@ private lemma toLp_fst_snd (z : WithLp 2 (E × F)) : WithLp.toLp 2 (z.fst, z.snd
 
 theorem grad_fst_eq (h : Differentiable ℝ H) (z : WithLp 2 (E × F)) :
     (gradient H z).fst = grad_fst H z.snd z.fst := by
-  have h₁ : HasGradientAt (fun x ↦ H (WithLp.toLp 2 (x, z.snd))) (grad_fst H z.snd z.fst) z.fst := by
+  have h₁ : HasGradientAt (fun x ↦ H (WithLp.toLp 2 (x, z.snd)))
+      (grad_fst H z.snd z.fst) z.fst := by
     apply DifferentiableAt.hasGradientAt
     apply diff_prod₁ h
   have h₂ : HasGradientAt (fun x ↦ H (WithLp.toLp 2 (x, z.snd))) (gradient H z).fst z.fst := by
@@ -105,7 +107,8 @@ theorem grad_fst_eq (h : Differentiable ℝ H) (z : WithLp 2 (E × F)) :
 
 theorem grad_snd_eq (h : Differentiable ℝ H) (z : WithLp 2 (E × F)) :
     (gradient H z).snd = grad_snd H z.fst z.snd := by
-  have h₁ : HasGradientAt (fun y ↦ H (WithLp.toLp 2 (z.fst, y))) (grad_snd H z.fst z.snd) z.snd := by
+  have h₁ : HasGradientAt (fun y ↦ H (WithLp.toLp 2 (z.fst, y)))
+      (grad_snd H z.fst z.snd) z.snd := by
     apply DifferentiableAt.hasGradientAt
     apply diff_prod₂ h
   have h₂ : HasGradientAt (fun y ↦ H (WithLp.toLp 2 (z.fst, y))) (gradient H z).snd z.snd := by
@@ -181,8 +184,8 @@ instance Proper_Prod : ProperSpace (WithLp 2 (E × F)) where
     exact IsCompact.of_isClosed_subset (h.image hc) Metric.isClosed_closedBall hsub
 
 /--
-  Assumption: f and g are lower semicontinuous, H is continuously differentiable
-  ∇ H is l- Lipschitz continuous, f and g are lower bounded
+Assumption: f and g are lower semicontinuous, H is continuously differentiable
+∇ H is l- Lipschitz continuous, f and g are lower bounded
 -/
 class ProblemData (f : E → ℝ) (g : F → ℝ) (H : (WithLp 2 (E × F)) → ℝ) (l : NNReal) : Prop where
   lbdf : BddBelow (f '' univ)
@@ -194,26 +197,30 @@ class ProblemData (f : E → ℝ) (g : F → ℝ) (H : (WithLp 2 (E × F)) → �
   lip : LipschitzWith l (gradient H)
 
 /--
-  The definition of block coordinate descent
+The definition of block coordinate descent
 -/
 structure BCD (f : E → ℝ) (g : F → ℝ) (H : (WithLp 2 (E × F)) → ℝ) (l : NNReal)
     (x0 : E) (y0 : F) extends ProblemData f g H l where
+  /-- The sequence of iterates in the first block. -/
   x : ℕ → E
+  /-- The sequence of iterates in the second block. -/
   y : ℕ → F
   x0 : x 0 = x0
   y0 : y 0 = y0
+  /-- The step sizes of the proximal step in the first block. -/
   c : ℕ → ℝ
+  /-- The step sizes of the proximal step in the second block. -/
   d : ℕ → ℝ
   s₁ : ∀ k, prox_prop (c k • f) (x k - c k • (grad_fst H (y k) (x k))) (x (k + 1))
   s₂ : ∀ k, prox_prop (d k • g) (y k - d k • (grad_snd H (x (k + 1)) (y k))) (y (k + 1))
 
 open BCD
 
-/- the notation z in BCD -/
+/-- The sequence of iterates `z n = (x n, y n)` of the algorithm in `WithLp 2 (E × F)`. -/
 def BCD.z {self : BCD f g H l x0 y0} : ℕ → WithLp 2 (E × F) :=
   fun n ↦ WithLp.toLp 2 (self.x n, self.y n)
 
-/- the notation ψ in BCD -/
+/-- The objective function `ψ z = f z.fst + g z.snd + H z` of the algorithm. -/
 def BCD.ψ {_ : BCD f g H l x0 y0} := fun z : WithLp 2 (E × F) ↦ f z.fst + g z.snd + H z
 
 variable {alg : BCD f g H l x0 y0}
@@ -228,14 +235,14 @@ lemma comp_norm_le (x : E) (y : F) : (‖x‖ ≤ ‖(x,y)‖) ∧ (‖y‖ ≤ 
   ⟨le_max_left ‖x‖ ‖y‖, le_max_right ‖x‖ ‖y‖⟩
 
 omit [ProperSpace E] [ProperSpace F] in
-lemma BCD.cpos (γ : ℝ) (hγ : γ > 1) (ck: ∀ k, alg.c k = 1 / (γ * l)): ∀ k, 0 < (alg.c k) := by
+lemma BCD.cpos (γ : ℝ) (hγ : γ > 1) (ck : ∀ k, alg.c k = 1 / (γ * l)) : ∀ k, 0 < (alg.c k) := by
   intro k
   specialize ck k; rw [ck]
   apply div_pos; norm_num
   apply mul_pos; linarith[hγ]; apply alg.lpos
 
 omit [ProperSpace E] [ProperSpace F] in
-lemma BCD.dpos (γ : ℝ) (hγ : γ > 1) (dk: ∀ k, alg.d k = 1 / (γ * l)): ∀ k, 0 < (alg.d k) := by
+lemma BCD.dpos (γ : ℝ) (hγ : γ > 1) (dk : ∀ k, alg.d k = 1 / (γ * l)) : ∀ k, 0 < (alg.d k) := by
   intro k
   specialize dk k; rw [dk]
   apply div_pos; norm_num
@@ -246,16 +253,16 @@ omit [InnerProductSpace ℝ E] [CompleteSpace E] [ProperSpace E]
 private lemma sub_prod (x x1 : E) (y y1 : F) :
     WithLp.toLp 2 (x, y) - WithLp.toLp 2 (x1, y1) = WithLp.toLp 2 (x - x1, y - y1) := rfl
 
-/- Define the A^k_x -/
+/-- The vector `A_kx k = (c k)⁻¹ • (x k - x (k + 1)) - grad_fst H (y k) (x k)`. -/
 def BCD.A_kx k := (alg.c k)⁻¹ • (alg.x k - alg.x (k + 1)) - (grad_fst H (alg.y k) (alg.x k))
 
-/- Define the A^k_y -/
+/-- The vector `A_ky k = (d k)⁻¹ • (y k - y (k + 1)) - grad_snd H (x (k + 1)) (y k)`. -/
 def BCD.A_ky k := (alg.d k)⁻¹ • (alg.y k - alg.y (k + 1)) - (grad_snd H (alg.x (k + 1)) (alg.y k))
 
-/- Define the A^k = (A^k_x, A^k_y) -/
+/-- The vector `A_k k = (A_kx k, A_ky k)` in `WithLp 2 (E × F)`. -/
 def BCD.A_k (k : ℕ) : WithLp 2 (E × F) := WithLp.toLp 2 (alg.A_kx k, alg.A_ky k)
 
-/- Define the gradient of A^k -/
+/-- The vector `A_k k + ∇ H (x (k + 1), y (k + 1))`. -/
 def BCD.subdiff k := alg.A_k k + gradient H (WithLp.toLp 2 (alg.x (k + 1), alg.y (k + 1)))
 
 end algorithm

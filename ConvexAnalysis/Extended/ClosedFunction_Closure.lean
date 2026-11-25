@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025  Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
+Copyright (c) 2025 Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
+Authors: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
 -/
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.LinearAlgebra.Dual.Basis
@@ -39,6 +39,7 @@ if its epigraph over `s` is closed in the topological space `E × ℝ`.
 Purpose: provide a topological characterization of closedness for functions,
 linking the property of the function to the closedness of its epigraph.
 -/
+/-- The function `g` is closed on `s`: its epigraph `g.Epi s` is a closed subset of `E × ℝ`. -/
 def Function.IsClosed [TopologicalSpace E] (g : E → EReal) (s : Set E) : Prop :=
   _root_.IsClosed (g.Epi s)
 
@@ -50,6 +51,8 @@ Purpose: construct the “best” lower semicontinuous function lying below `g`,
 which is useful in analysis and optimization for regularizing or approximating
 functions by lower semicontinuous ones.
 -/
+/-- The lower semicontinuous hull of `g` on `s`: the pointwise supremum of all functions `f` that
+are lower semicontinuous on `s` and satisfy `f z ≤ g z` for all `z ∈ s`. -/
 noncomputable def Function.LowerSemicontinuousHull [TopologicalSpace E]
     (s : Set E) (g : E → EReal) : E → EReal :=
   ⨆ (f : E → EReal) (_ : LowerSemicontinuousOn f s) (_ : ∀ z ∈ s, f z ≤ g z ) , f
@@ -63,6 +66,8 @@ Purpose: provide a unified notion of closure for extended-real-valued functions,
 capturing both proper and degenerate cases, while ensuring that the resulting
 function behaves well topologically (lower semicontinuous) when `g` is proper.
 -/
+/-- The closure of `g` on `s`: the lower semicontinuous hull of `g` on `s` if `g` is proper on `s`;
+otherwise the constant `⊥` if `g x = ⊥` for some `x ∈ s`, and the constant `⊤` if not. -/
 noncomputable def Function.closure [TopologicalSpace E]
     (g : E → EReal) (s : Set E) : E → EReal :=
   letI : Decidable (ProperFunction s g) := Classical.propDecidable (ProperFunction s g)
@@ -176,7 +181,10 @@ lower semicontinuous hull of a function, since the hull is defined
 as the supremum of all such `h`.
 -/
 variable (s f) in
+/-- A minorant of `f` on `s` that is lower semicontinuous on `s`: a function `h : E → EReal`,
+lower semicontinuous on `s`, with `h z ≤ f z` for all `z ∈ s`. -/
 structure low_lowersemicontinous where
+  /-- The underlying function. -/
   h : E → EReal
   hs : LowerSemicontinuousOn h s
   hfz : ∀ z ∈ s, h z ≤ f z
@@ -896,8 +904,10 @@ the closure of the epigraph of the function (real version).
 -/
 variable [NormedAddCommGroup E] {s : Set E} {f : E → EReal}
 
+/-- The set `s × {⊤}` in `E × EReal`: the pairs `(x, ⊤)` with `x ∈ s`. -/
 def topline (s : Set E) := {(x, y) : E × EReal | x ∈ s ∧ y = ⊤}
 
+/-- The set `s × {⊥}` in `E × EReal`: the pairs `(x, ⊥)` with `x ∈ s`. -/
 def botline (s : Set E) := {(x, y) : E × EReal | x ∈ s ∧ y = ⊥}
 
 /-!
@@ -1056,7 +1066,8 @@ Lemma. If the union of two sets `s ∪ a` equals `t ∪ a`, and both `s` and `t`
 are disjoint from `a`, then `s` equals `t`.
 Purpose: a set-theoretic lemma to help prove the main theorem.
 -/
-lemma aux_set_eq_of_cup {α : Type*} {s t a : Set α} (h : s ∪ a = t ∪ a) (hs : s ∩ a = ∅) (ht : t ∩ a = ∅) :
+lemma aux_set_eq_of_cup {α : Type*} {s t a : Set α} (h : s ∪ a = t ∪ a) (hs : s ∩ a = ∅)
+    (ht : t ∩ a = ∅) :
     s = t := by
   simp [← disjoint_iff_inter_eq_empty, Set.union_eq_union_iff_right] at *
   have h1:= Disjoint.subset_left_of_subset_union h.1 hs

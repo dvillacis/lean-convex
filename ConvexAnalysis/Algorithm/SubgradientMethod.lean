@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2024 Hongjia Chen, Chenyi Li, Wanyi He, Zaiwen Wen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Hongjia Chen, Chenyi Li, Wanyi He, Zaiwen Wen
+Authors: Hongjia Chen, Chenyi Li, Wanyi He, Zaiwen Wen
 -/
 import Mathlib.Analysis.Normed.Group.Basic
 import Mathlib.Data.Fintype.Order
@@ -27,12 +27,12 @@ section
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
-variable {S :Set E} {f : E → ℝ} {g : E} {x : E}
+variable {S : Set E} {f : E → ℝ} {g : E} {x : E}
 
 variable {G : NNReal}
 
 theorem bounded_subgradient_to_Lipschitz (hf : ConvexOn ℝ univ f) (hc : ContinuousOn f univ)
-    (h : ∀ ⦃x : E⦄ , ∀ ⦃g⦄ , g ∈ SubderivAt f x → ‖g‖ ≤ G) :
+    (h : ∀ ⦃x : E⦄, ∀ ⦃g⦄, g ∈ SubderivAt f x → ‖g‖ ≤ G) :
     LipschitzWith G f := by
   intro x y
   have hx₂' : Nonempty (SubderivAt f x) := SubderivAt.nonempty hf hc x
@@ -78,7 +78,7 @@ theorem bounded_subgradient_to_Lipschitz (hf : ConvexOn ℝ univ f) (hc : Contin
       _ ≤ ↑G * ‖x - y‖ := mul_le_mul_of_nonneg_right hx₃ (norm_nonneg _)
 
 omit [CompleteSpace E] in
-theorem Lipschitz_to_bounded_subgradient (h : LipschitzWith G f ) :
+theorem Lipschitz_to_bounded_subgradient (h : LipschitzWith G f) :
     ∀ ⦃x : E⦄ , ∀ ⦃g⦄ , g ∈ SubderivAt f x → ‖g‖ ≤ G := by
   by_contra h₁
   push Not at h₁
@@ -128,16 +128,26 @@ section
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
-variable {S :Set E} {f : E → ℝ} {g : E} {x : E}
+variable {S : Set E} {f : E → ℝ} {g : E} {x : E}
 
 variable (hf : ConvexOn ℝ univ f)
 
 open Finset
 
+/-- The subgradient method for a `G`-Lipschitz function `f`, started at `x₀`: the iterates
+satisfy `x (k + 1) = x k - a k • g k` with step sizes `a k > 0` and subgradients
+`g k ∈ SubderivAt f (x k)`. -/
 class subgradient_method (f : E → ℝ) (x₀ : E) where
-  (x g : ℕ → E)
-  (a : ℕ → ℝ) (ha : ∀ n, a n > 0)
-  (G : NNReal) (lipschitz : LipschitzWith G f)
+  /-- The sequence of iterates. -/
+  (x : ℕ → E)
+  /-- The sequence of subgradients, `g n ∈ SubderivAt f (x n)`. -/
+  (g : ℕ → E)
+  /-- The sequence of step sizes. -/
+  (a : ℕ → ℝ)
+  (ha : ∀ n, a n > 0)
+  /-- The Lipschitz constant of `f`. -/
+  (G : NNReal)
+  (lipschitz : LipschitzWith G f)
   (initial : x 0 = x₀)
   (update : ∀ k, (x (k + 1)) = x k - a k • (g k))
   (hg : ∀ n, g n ∈ SubderivAt f (x n))
@@ -146,12 +156,13 @@ variable (xm x₀ : E) {alg : subgradient_method f x₀}
 
 /- Convergence of general subgradient method -/
 omit [CompleteSpace E] in
-theorem subgradient_method_converge:
+theorem subgradient_method_converge :
     ∀ k, 2 * ((Finset.range (k + 1)).sum alg.a) *
     (sInf {x | ∃ i ∈ Finset.range (k + 1), f (alg.x i) = x} - f xm)
     ≤ ‖x₀ - xm‖ ^ 2 + alg.G ^ 2 * (Finset.range (k + 1)).sum (fun i => alg.a i ^ 2) := by
   intro k
-  have h' : ∀ ⦃x : E⦄ , ∀ ⦃g⦄ , g ∈ SubderivAt f x → ‖g‖ ≤ alg.G := Lipschitz_to_bounded_subgradient alg.lipschitz
+  have h' : ∀ ⦃x : E⦄ , ∀ ⦃g⦄ , g ∈ SubderivAt f x → ‖g‖ ≤ alg.G :=
+    Lipschitz_to_bounded_subgradient alg.lipschitz
   by_cases k₀ : k = 0
   · simp [k₀]
     rcases (alg.hg 0) xm with hk₀
@@ -173,7 +184,8 @@ theorem subgradient_method_converge:
       intro i ⟨ _ ,hi₂⟩
       rw [alg.update i, sub_right_comm, norm_sub_sq_real, norm_smul, mul_pow, sub_eq_add_neg]
       have : ‖alg.x i - xm‖ ^ 2 - 2 * alg.a i * (sInf {x | ∃ i ∈ Finset.range (k + 1), f (alg.x i) =
-          x} - f xm) + ↑alg.G ^ 2 * alg.a i ^ 2 = ‖alg.x i - xm‖ ^ 2 + - (2 * alg.a i * (sInf {x | ∃ i ∈
+          x} - f xm) + ↑alg.G ^ 2 * alg.a i ^ 2 =
+          ‖alg.x i - xm‖ ^ 2 + - (2 * alg.a i * (sInf {x | ∃ i ∈
           Finset.range (k + 1), f (alg.x i) = x} - f xm)) + ↑alg.G ^ 2 * alg.a i ^ 2 := by ring
       rw [this]
       have inq₁: ‖alg.a i‖ ^ 2 * ‖alg.g i‖ ^ 2 ≤ ↑alg.G ^ 2 * alg.a i ^ 2 := by
@@ -226,10 +238,11 @@ theorem subgradient_method_converge:
           Finset.range (k + 1), f (alg.x i) = x} - f xm) := by simp
       _ ≤ ‖x₀ - xm‖ ^ 2 - ‖alg.x (k + 1) - xm‖ ^ 2 + ↑alg.G ^ 2 * Finset.sum (Finset.range
           (k + 1)) fun x => alg.a x ^ 2 := by apply h₂
-      _ ≤ ‖x₀ - xm‖ ^ 2 + alg.G ^ 2 * Finset.sum (Finset.range (k + 1)) fun x => alg.a x ^ 2 := by simp
+      _ ≤ ‖x₀ - xm‖ ^ 2 + alg.G ^ 2 *
+          Finset.sum (Finset.range (k + 1)) fun x => alg.a x ^ 2 := by simp
 
 omit [CompleteSpace E] in
-/-- convergence with fixed step size --/
+/-- convergence with fixed step size -/
 theorem subgradient_method_fix_step_size {t : ℝ}
     (ha' : ∀ (n : ℕ), alg.a n = t) :
     ∀ (k : ℕ) , sInf {f (alg.x i) | i ∈ Finset.range (k + 1)} - f xm
@@ -255,9 +268,9 @@ theorem subgradient_method_fix_step_size {t : ℝ}
       field_simp
 
 omit [CompleteSpace E] in
-/-- convergence with fixed $‖x^{i+1}-x^{i}‖$ --/
+/-- convergence with fixed $‖x^{i+1}-x^{i}‖$ -/
 theorem subgradient_method_fixed_distance {s : ℝ} (hm : IsMinOn f univ xm)
-   (ha' : ∀ (n : ℕ), alg.a n * ‖alg.g n‖ = s) (hs : s > 0):
+   (ha' : ∀ (n : ℕ), alg.a n * ‖alg.g n‖ = s) (hs : s > 0) :
     ∀ (k : ℕ) ,(sInf {x | ∃ i ∈ Finset.range (k + 1), f (alg.x i) = x}) - (f xm)
       ≤ alg.G * ‖x₀ - xm‖ ^ 2 / (2 * (k + 1) * s) + alg.G * s / 2 := by
   intro k
@@ -295,7 +308,8 @@ theorem subgradient_method_fixed_distance {s : ℝ} (hm : IsMinOn f univ xm)
     apply add_le_add
     · apply neg_le_neg; apply inq₂
     · simp
-  have h₁' :  ∀ ⦃i : ℕ⦄ , i ≥ 0 ∧ i ≤ k → alg.a i * (2 * (sInf {f (alg.x i) | i ∈ Finset.range (k + 1)}
+  have h₁' :  ∀ ⦃i : ℕ⦄ , i ≥ 0 ∧ i ≤ k →
+      alg.a i * (2 * (sInf {f (alg.x i) | i ∈ Finset.range (k + 1)}
        - f xm)) ≤ ‖alg.x i - xm‖ ^ 2 - ‖alg.x (i+1) - xm‖ ^ 2 + s ^ 2 := by
     intro i ⟨hi₁, hi₂⟩
     rcases h₁ ⟨hi₁, hi₂⟩ with hii
@@ -322,7 +336,8 @@ theorem subgradient_method_fixed_distance {s : ℝ} (hm : IsMinOn f univ xm)
       have : alg.a 0 * ‖alg.g 0‖ > 0 := by rw[ha' 0]; apply hs
       apply (pos_iff_pos_of_mul_pos this).mp (alg.ha 0)
   have inq₁ : Finset.sum (Finset.range (k + 1)) (fun x => alg.a x) ≥ (k + 1) * (s / ↑alg.G) := by
-    have : Finset.sum (range (k + 1)) (fun _ => s / (NNReal.toReal alg.G)) = (k + 1) * (s / ↑alg.G) := by
+    have : Finset.sum (range (k + 1)) (fun _ => s / (NNReal.toReal alg.G)) =
+        (k + 1) * (s / ↑alg.G) := by
       rw [Finset.sum_const]; simp
     rw[← this]
     apply Finset.sum_le_sum
@@ -360,7 +375,8 @@ theorem subgradient_method_fixed_distance {s : ℝ} (hm : IsMinOn f univ xm)
         apply hmi
   calc
     _= sInf {x | ∃ i ≤ k, f (alg.x i) = x} - f xm := by simp
-    _ ≤ (‖x₀ - xm‖ ^ 2 - ‖alg.x (k + 1) - xm‖ ^ 2 + (k + 1) * s ^ 2) / (2 * (k + 1) * (s / alg.G)) := by
+    _ ≤ (‖x₀ - xm‖ ^ 2 - ‖alg.x (k + 1) - xm‖ ^ 2 + (k + 1) * s ^ 2) /
+        (2 * (k + 1) * (s / alg.G)) := by
       apply (le_div_iff₀' hpos₁').mpr h₂'
     _ ≤ (‖x₀ - xm‖ ^ 2 + (↑k + 1) * s ^ 2) / (2 * (↑k + 1) * (s / ↑alg.G)) := by
       apply (div_le_div_iff_of_pos_right hpos₁').mpr; simp

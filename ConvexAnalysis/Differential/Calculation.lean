@@ -342,7 +342,7 @@ end Mul
 
 section Mul_const
 
-variable {c' a': F} {c a: F → 𝕜} {x : F} (d b: 𝕜)
+variable {c' a' : F} {c a : F → 𝕜} {x : F} (d b : 𝕜)
 
 lemma equiv_lemma_mul_const : d • (toDual 𝕜 F) c' = (toDual 𝕜 F) ((starRingEnd 𝕜) d • c') := by
   rw [map_smulₛₗ, RingHomCompTriple.comp_apply, RingHom.id_apply]
@@ -382,7 +382,7 @@ theorem gradient_const_mul (ha : DifferentiableAt 𝕜 a x) :
     ∇ (fun y => b * a y) x = (starRingEnd 𝕜) b • ∇ a x :=
   (ha.hasGradientAt.const_mul b).gradient
 
-variable [InnerProductSpace ℝ F] {c' a': F} {c a: F → ℝ} {x : F} (d b: ℝ)
+variable [InnerProductSpace ℝ F] {c' a' : F} {c a : F → ℝ} {x : F} (d b : ℝ)
 
 theorem HasGradientWithinAt.mul_const' (hc : HasGradientWithinAt c c' s x) :
     HasGradientWithinAt (fun y => c y * d) (d • c') s x :=
