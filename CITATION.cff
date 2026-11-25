@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: >-
+  If you use this library, please cite it using the metadata below. Most of it is a port of
+  OptLib; please cite OptLib as well.
+type: software
+title: "ConvexAnalysis: convex analysis and subdifferential calculus in Lean 4"
+abstract: >-
+  A Lean 4 / Mathlib library of convex analysis and subdifferential calculus: convex functions,
+  subgradients, conjugates, proximal maps, optimality conditions and first-order algorithms,
+  starting from a port of OptLib.
+authors:
+  - family-names: Villacís
+    given-names: David
+version: 0.1.1
+date-released: 2026-11-24
+license: Apache-2.0
+repository-code: "https://github.com/dvillacis/lean-convex"
+url: "https://david.villacis.net/lean-convex/docs/"
+keywords:
+  - Lean 4
+  - Mathlib
+  - formalized mathematics
+  - convex analysis
+  - optimization
+references:
+  - type: software
+    title: OptLib
+    authors:
+      - name: The OptLib authors
+    repository-code: "https://github.com/optsuite/optlib"

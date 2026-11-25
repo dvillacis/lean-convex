@@ -4,6 +4,7 @@ description = "Convex analysis and subdifferential calculus: subgradients, conju
 keywords = ["math", "analysis", "optimization", "convex-analysis"]
 license = "Apache-2.0"
 defaultTargets = ["ConvexAnalysis"]
+testDriver = "ConvexAnalysisTest"
 # Dependents download the compiled library from the GitHub release of the pinned tag.
 preferReleaseBuild = true
 
@@ -11,6 +12,9 @@ preferReleaseBuild = true
 pp.unicode.fun = true
 autoImplicit = false
 relaxedAutoImplicit = false
+
+[[lean_lib]]
+name = "ConvexAnalysisTest"
 
 [[require]]
 name = "mathlib"
