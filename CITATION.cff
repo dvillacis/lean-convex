@@ -14,6 +14,10 @@ authors:
 version: 0.1.2
 date-released: 2026-11-25
 license: Apache-2.0
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24530553
+    description: "All versions (the DOI of the latest version resolves from here)"
 repository-code: "https://github.com/dvillacis/lean-convex"
 url: "https://david.villacis.net/lean-convex/docs/"
 keywords:
