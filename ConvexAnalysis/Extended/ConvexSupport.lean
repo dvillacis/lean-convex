@@ -343,7 +343,7 @@ end convex_support_property
 
 end convex_support
 
-theorem ccp_convex_conjugate_bijective {f g : E → EReal} [FiniteDimensional ℝ E]
+theorem ccp_convex_conjugate_bijective {f g : E → EReal} [CompleteSpace E]
     (hf : ConvexOn ℝ (dom univ f) f ∧ LowerSemicontinuous f ∧ ProperFunction univ f)
     (hg : ConvexOn ℝ (dom univ g) g ∧ LowerSemicontinuous g ∧ ProperFunction univ g) :
     convex_conjugate univ f =  convex_conjugate univ g ↔ f = g := by

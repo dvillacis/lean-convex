@@ -12,6 +12,7 @@ import Mathlib.Topology.Algebra.Module.LinearMap
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import ConvexAnalysis.Extended.AffineMinorant
 import ConvexAnalysis.Extended.AffineMinorantExistence
+import ConvexAnalysis.Extended.AffineMinorantHilbert
 import ConvexAnalysis.Extended.EReal
 
 open Filter BigOperators Set Topology Inner Function Module EReal
@@ -773,17 +774,20 @@ its biconjugate is the function itself (`f** = f`).
 This establishes that the biconjugate operation is the
 identity on the space of closed convex functions.
 -/
-theorem bi_convex_conjugate_eq_self [FiniteDimensional ℝ E] {f : E → EReal}
+theorem bi_convex_conjugate_eq_self [CompleteSpace E] {f : E → EReal}
     (cf : LowerSemicontinuous f) (hf : ConvexOn ℝ univ f) :
     convex_conjugate univ (convex_conjugate univ f) =  f := by
-  nth_rw 2 [ccp_closure_is_self hf cf]
-  apply bi_convex_conjugate_eq_closure (convexOn_dom_s_f_of_convexOn_s hf)
+  -- Holds on every Hilbert space (Bauschke–Combettes, Thm 13.37): `f**` is the supremum of the
+  -- minorants `⟪l, ·⟫ + w` of `f`, and so is `f` (`lsc_convex_eq_iSup_inner_minorant`).
+  ext x
+  rw [bi_convex_conjugate_is_sup_of_affine_bound x trivial]
+  exact (lsc_convex_eq_iSup_inner_minorant hf cf x).symm
 /-
 This theorem shows that the convex conjugate operator is injective on the space of
 proper, closed, convex functions. Two such functions are equal if and only if their
 convex conjugates are equal. This ensures that no information is lost when taking the conjugate.
 -/
-theorem convex_conjugate_congr_iff {f g : E → EReal} [FiniteDimensional ℝ E]
+theorem convex_conjugate_congr_iff {f g : E → EReal} [CompleteSpace E]
     [ProperFunction univ f] [ProperFunction univ g]
     (hf : ConvexOn ℝ univ f) (hg : ConvexOn ℝ univ g)
     (hfl : LowerSemicontinuous f) (hgl : LowerSemicontinuous g) :

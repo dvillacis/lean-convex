@@ -28,12 +28,15 @@ For `f : E → ℝ`, write `f*` for the conjugate of `x ↦ (f x : EReal)` over 
   it agrees with `HasSubgradientAt` for real-valued functions (`hasERealSubgradientAt_coe_iff`).
 * `hasERealSubgradientAt_iff_conjugate_eq`: for finite `f x`, `g ∈ ∂f(x)` iff
   `f* g = ⟪x, g⟫ - f x`.
+* `hasERealSubgradientAt_conjugate_iff_of_biconjugate_eq`: for finite `f x` with
+  `f** x = f x`, `g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`.
+* `hasERealSubgradientAt_conjugate_iff` (Rockafellar, Thm 23.5; Bauschke–Combettes,
+  Cor 16.30): reciprocity for a lower semicontinuous convex `f` on a Hilbert space.
 * `hasERealSubgradientAt_conjugate_iff_of_closure_eq` (Rockafellar, Thm 23.5): for a convex
-  `f` on a finite-dimensional space, finite `f x` and `(cl f)(x) = f x`, `g ∈ ∂f(x)` iff
-  `x ∈ ∂f*(g)`.
-* `hasERealSubgradientAt_conjugate_iff`: the case of a lower semicontinuous `f`.
-* `hasSubgradientAt_iff_mem_subgradient_conjugate`: the same for a convex
-  `f : E → ℝ`.
+  `f` on a finite-dimensional space, finite `f x` and `(cl f)(x) = f x`.
+* `hasSubgradientAt_iff_mem_subgradient_conjugate_of_continuous`,
+  `hasSubgradientAt_iff_mem_subgradient_conjugate`: the same for a continuous convex
+  `f : E → ℝ` on a Hilbert space, and for a convex `f : E → ℝ` in finite dimension.
 -/
 
 open Set EReal
@@ -150,16 +153,12 @@ theorem hasERealSubgradientAt_iff_conjugate_eq (hbot : f x ≠ ⊥) (htop : f x 
       have := real_inner_comm g x
       linarith
 
-/-- **Reciprocity of subgradients** (Rockafellar, Thm 23.5). For a convex `f` on a
-finite-dimensional space and a point where `f x` is finite and `(cl f)(x) = f x`,
-`g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`. The proof uses `f** = cl f` (`bi_convex_conjugate_eq_closure`),
-and only at the point `x`. -/
-theorem hasERealSubgradientAt_conjugate_iff_of_closure_eq [FiniteDimensional ℝ E]
-    (hc : ConvexOn ℝ (dom univ f) f) (hcl : Function.closure f univ x = f x)
+/-- **Reciprocity of subgradients**, in its bare form: at a point where `f x` is finite and
+`f** x = f x`, `g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`. No assumption on `f` or on the space. -/
+theorem hasERealSubgradientAt_conjugate_iff_of_biconjugate_eq
+    (hff : convex_conjugate univ (convex_conjugate univ f) x = f x)
     (hbot : f x ≠ ⊥) (htop : f x ≠ ⊤) :
     HasERealSubgradientAt f g x ↔ HasERealSubgradientAt (convex_conjugate univ f) x g := by
-  have hff : convex_conjugate univ (convex_conjugate univ f) x = f x := by
-    rw [bi_convex_conjugate_eq_closure hc, hcl]
   obtain ⟨u, hu⟩ : ∃ u : ℝ, f x = u := ⟨(f x).toReal, (EReal.coe_toReal htop hbot).symm⟩
   rw [hasERealSubgradientAt_iff_conjugate_eq hbot htop, hu]
   -- `f* g` is not `⊥`, by Fenchel–Young
@@ -197,24 +196,44 @@ theorem hasERealSubgradientAt_conjugate_iff_of_closure_eq [FiniteDimensional ℝ
     rw [hc', ← EReal.coe_sub, EReal.coe_eq_coe_iff, real_inner_comm]
     linarith
 
-/-- **Reciprocity of subgradients** for a lower semicontinuous convex `f` on a
-finite-dimensional space and a point where `f x` is finite: `g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`. -/
-theorem hasERealSubgradientAt_conjugate_iff [FiniteDimensional ℝ E]
+/-- **Reciprocity of subgradients** (Rockafellar, Thm 23.5). For a convex `f` on a
+finite-dimensional space and a point where `f x` is finite and `(cl f)(x) = f x`,
+`g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`. The proof uses `f** = cl f` (`bi_convex_conjugate_eq_closure`),
+and only at the point `x`. -/
+theorem hasERealSubgradientAt_conjugate_iff_of_closure_eq [FiniteDimensional ℝ E]
+    (hc : ConvexOn ℝ (dom univ f) f) (hcl : Function.closure f univ x = f x)
+    (hbot : f x ≠ ⊥) (htop : f x ≠ ⊤) :
+    HasERealSubgradientAt f g x ↔ HasERealSubgradientAt (convex_conjugate univ f) x g :=
+  hasERealSubgradientAt_conjugate_iff_of_biconjugate_eq
+    (by rw [bi_convex_conjugate_eq_closure hc, hcl]) hbot htop
+
+/-- **Reciprocity of subgradients** for a lower semicontinuous convex `f` on a Hilbert space
+and a point where `f x` is finite: `g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`. The proof uses `f** = f`
+(`bi_convex_conjugate_eq_self`). -/
+theorem hasERealSubgradientAt_conjugate_iff [CompleteSpace E]
     (hl : LowerSemicontinuous f) (hc : ConvexOn ℝ univ f) (hbot : f x ≠ ⊥) (htop : f x ≠ ⊤) :
     HasERealSubgradientAt f g x ↔ HasERealSubgradientAt (convex_conjugate univ f) x g :=
-  hasERealSubgradientAt_conjugate_iff_of_closure_eq (convexOn_dom_s_f_of_convexOn_s hc)
-    (congrFun (ccp_closure_is_self hc hl).symm x) hbot htop
+  hasERealSubgradientAt_conjugate_iff_of_biconjugate_eq
+    (congrFun (bi_convex_conjugate_eq_self hl hc) x) hbot htop
+
+/-- Reciprocity for a continuous convex `f : E → ℝ` on a Hilbert space:
+`g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`. -/
+theorem hasSubgradientAt_iff_mem_subgradient_conjugate_of_continuous [CompleteSpace E]
+    {f : E → ℝ} (hl : Continuous f) (hc : ConvexOn ℝ univ f) :
+    HasSubgradientAt f g x ↔
+      HasERealSubgradientAt (convex_conjugate univ (fun y => (f y : EReal))) x g := by
+  rw [← hasERealSubgradientAt_coe_iff]
+  exact hasERealSubgradientAt_conjugate_iff
+    (continuous_coe_real_ereal.comp hl).lowerSemicontinuous
+    ((ProperFunctionConvexOn_iff_ConvexOn univ f).1 hc) (EReal.coe_ne_bot _) (EReal.coe_ne_top _)
 
 /-- Reciprocity for a convex `f : E → ℝ` on a finite-dimensional space (where `f` is
 continuous): `g ∈ ∂f(x)` iff `x ∈ ∂f*(g)`. -/
 theorem hasSubgradientAt_iff_mem_subgradient_conjugate [FiniteDimensional ℝ E] {f : E → ℝ}
     (hc : ConvexOn ℝ univ f) :
     HasSubgradientAt f g x ↔
-      HasERealSubgradientAt (convex_conjugate univ (fun y => (f y : EReal))) x g := by
-  have hl : Continuous f := continuousOn_univ.1 (hc.continuousOn isOpen_univ)
-  rw [← hasERealSubgradientAt_coe_iff]
-  exact hasERealSubgradientAt_conjugate_iff
-    (continuous_coe_real_ereal.comp hl).lowerSemicontinuous
-    ((ProperFunctionConvexOn_iff_ConvexOn univ f).1 hc) (EReal.coe_ne_bot _) (EReal.coe_ne_top _)
+      HasERealSubgradientAt (convex_conjugate univ (fun y => (f y : EReal))) x g :=
+  hasSubgradientAt_iff_mem_subgradient_conjugate_of_continuous
+    (continuousOn_univ.1 (hc.continuousOn isOpen_univ)) hc
 
 end Extended
