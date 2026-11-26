@@ -27,6 +27,12 @@ with `x̄_n = x_n + (x_n - x_{n-1})` (`x̄_0 = x_0`).
 * `Run.cluster_saddle` — every cluster point of `(x_{n+1}, y_{n+1})` is a saddle point.
 * `Run.energy_bound` — Theorem 1(a) of Chambolle–Pock:
   `‖x* - x_n‖²/(2τ) + (1-κ) ‖y* - y_n‖²/(2σ) ≤ ‖x* - x_0‖²/(2τ) + ‖y* - y_0‖²/(2σ)`.
+* `Run.energy_step_gap`, `Run.sum_gap_le` — the energy inequality at an arbitrary
+  `(x, y) ∈ C × D`, with the partial gap `Lag(x_{n+1}, y) - Lag(x, y_{n+1})`, and its telescoped
+  form.
+* `Run.ergodic_gap` — Theorem 1(b) of Chambolle–Pock: for convex `Gf`, `Ff` the averages
+  `x̄_N`, `ȳ_N` of the iterates satisfy
+  `Lag(x̄_N, y) - Lag(x, ȳ_N) ≤ (‖x - x_0‖²/(2τ) + ‖y - y_0‖²/(2σ)) / N` on `C × D`.
 * `Run.tendsto_saddle` — Theorem 1(c) of Chambolle–Pock: in finite dimension the whole
   sequence `(x_n, y_n)` converges to a saddle point.
 * `Run.exists_le` — a continuous function that vanishes at saddle points is `≤ ε` at some
@@ -131,21 +137,26 @@ noncomputable def V (M : ℝ) (xs : X) (ys : Y) (n : ℕ) : ℝ :=
 noncomputable def step (n : ℕ) : ℝ :=
   ‖dseq run.x (n + 1)‖ ^ 2 / (2 * τ) + ‖run.y (n + 1) - run.y n‖ ^ 2 / (2 * σ)
 
+/-- The ergodic average `(x_1 + ⋯ + x_N) / N` of the primal iterates. -/
+noncomputable def xavg (N : ℕ) : X := ∑ i ∈ Finset.range N, (N : ℝ)⁻¹ • run.x (i + 1)
+
+/-- The ergodic average `(y_1 + ⋯ + y_N) / N` of the dual iterates. -/
+noncomputable def yavg (N : ℕ) : Y := ∑ i ∈ Finset.range N, (N : ℝ)⁻¹ • run.y (i + 1)
+
 variable (hM0 : 0 ≤ M) (hM : ∀ x, ‖L x‖ ^ 2 ≤ M * ‖x‖ ^ 2) (hτ : 0 < τ) (hσ : 0 < σ)
   {xs : X} {ys : Y} (hs : IsSaddle L Gf Ff C D xs ys)
 include hM0 hM hτ hσ hs
 
-/-- **One-step energy inequality.** -/
-theorem energy_step (n : ℕ) :
-    run.V M xs ys (n + 1) + (1 - Real.sqrt (τ * σ * M)) * run.step n ≤ run.V M xs ys n := by
+omit hs in
+/-- **One-step energy inequality with the partial gap.** For any `(x, y) ∈ C × D`, not
+necessarily a saddle point,
+`V_{n+1} + (1-κ) s_n + Lag(x_{n+1}, y) - Lag(x, y_{n+1}) ≤ V_n`. -/
+theorem energy_step_gap (hxs : xs ∈ C) (hys : ys ∈ D) (n : ℕ) :
+    run.V M xs ys (n + 1) + (1 - Real.sqrt (τ * σ * M)) * run.step n +
+      (Lag L Gf Ff (run.x (n + 1)) ys - Lag L Gf Ff xs (run.y (n + 1))) ≤ run.V M xs ys n := by
   set κ := Real.sqrt (τ * σ * M)
-  obtain ⟨hxs, hys, hsy, hsx⟩ := hs
   have hP := run.prox_x n xs hxs
   have hD := run.prox_y n ys hys
-  -- saddle: the partial gap at the new iterate is nonnegative
-  have hg1 := hsy (run.y (n + 1)) (run.y_mem n)
-  have hg2 := hsx (run.x (n + 1)) (run.x_mem n)
-  simp only [Lag] at hg1 hg2
   -- polarization identities
   have px := norm_sub_sq_real (run.x n - run.x (n + 1)) (xs - run.x (n + 1))
   have py := norm_sub_sq_real (run.y n - run.y (n + 1)) (ys - run.y (n + 1))
@@ -196,9 +207,18 @@ theorem energy_step (n : ℕ) :
   have hk1 : κ * ‖dseq run.x (n + 1)‖ ^ 2 / (2 * τ) =
       κ * (‖dseq run.x (n + 1)‖ ^ 2 / (2 * τ)) := by ring
   have hk0 : κ * ‖dseq run.x n‖ ^ 2 / (2 * τ) = κ * (‖dseq run.x n‖ ^ 2 / (2 * τ)) := by ring
-  simp only [V, step]
+  simp only [V, step, Lag]
   rw [hk1, hk0]
-  nlinarith [hP, hD, hg1, hg2, hy]
+  nlinarith [hP, hD, hy]
+
+/-- **One-step energy inequality.** At a saddle point the partial gap is nonnegative. -/
+theorem energy_step (n : ℕ) :
+    run.V M xs ys (n + 1) + (1 - Real.sqrt (τ * σ * M)) * run.step n ≤ run.V M xs ys n := by
+  obtain ⟨hxs, hys, hsy, hsx⟩ := hs
+  have h := run.energy_step_gap hM0 hM hτ hσ hxs hys n
+  have hg1 := hsy (run.y (n + 1)) (run.y_mem n)
+  have hg2 := hsx (run.x (n + 1)) (run.x_mem n)
+  linarith
 
 omit hs in
 /-- Lower bound for the energy: `V_n ≥ ‖x* - x_n‖²/(2τ) + (1-κ) ‖y* - y_n‖²/(2σ)`. -/
@@ -310,6 +330,81 @@ theorem bounded (hκ : τ * σ * M < 1) :
     norm_sub_rev, norm_sub_rev (run.y n)]
   exact ⟨hbx.trans (le_add_of_nonneg_right (Real.sqrt_nonneg _)),
     hby.trans (le_add_of_nonneg_left (Real.sqrt_nonneg _))⟩
+
+omit hs in
+/-- Telescoped partial gaps: for any `(x, y) ∈ C × D`,
+`∑_{i<N} (Lag(x_{i+1}, y) - Lag(x, y_{i+1})) ≤ ‖x - x_0‖²/(2τ) + ‖y - y_0‖²/(2σ)`. -/
+theorem sum_gap_le (hκ : τ * σ * M < 1) (hxs : xs ∈ C) (hys : ys ∈ D) (N : ℕ) :
+    ∑ i ∈ Finset.range N, (Lag L Gf Ff (run.x (i + 1)) ys - Lag L Gf Ff xs (run.y (i + 1))) ≤
+      ‖xs - run.x 0‖ ^ 2 / (2 * τ) + ‖ys - run.y 0‖ ^ 2 / (2 * σ) := by
+  have hk := one_sub_kappa_pos hκ
+  have key : ∀ n, ∑ i ∈ Finset.range n,
+      (Lag L Gf Ff (run.x (i + 1)) ys - Lag L Gf Ff xs (run.y (i + 1))) ≤
+        run.V M xs ys 0 - run.V M xs ys n := by
+    intro n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+      rw [Finset.sum_range_succ]
+      have h := run.energy_step_gap hM0 hM hτ hσ hxs hys n
+      have := mul_nonneg hk.le (run.step_nonneg hτ hσ n)
+      linarith
+  have h1 := run.V_lower hM0 hM hτ hσ N (xs := xs) (ys := ys)
+  have h2 : 0 ≤ ‖xs - run.x N‖ ^ 2 / (2 * τ) := by positivity
+  have h3 : 0 ≤ (1 - Real.sqrt (τ * σ * M)) * (‖ys - run.y N‖ ^ 2 / (2 * σ)) :=
+    mul_nonneg hk.le (by positivity)
+  have h4 := key N
+  rw [run.V_zero] at h4
+  linarith
+
+omit hs in
+/-- **Ergodic rate** (Chambolle–Pock, Theorem 1(b)). For convex `Gf` on `C` and `Ff` on `D`,
+the averages `x̄_N = (x_1 + ⋯ + x_N)/N`, `ȳ_N = (y_1 + ⋯ + y_N)/N` satisfy, for every
+`(x, y) ∈ C × D` and `N ≥ 1`,
+`Lag(x̄_N, y) - Lag(x, ȳ_N) ≤ (‖x - x_0‖²/(2τ) + ‖y - y_0‖²/(2σ)) / N`. No saddle point is
+needed. -/
+theorem ergodic_gap (hκ : τ * σ * M < 1) (hGc : ConvexOn ℝ C Gf) (hFc : ConvexOn ℝ D Ff)
+    (hxs : xs ∈ C) (hys : ys ∈ D) {N : ℕ} (hN : 0 < N) :
+    Lag L Gf Ff (run.xavg N) ys - Lag L Gf Ff xs (run.yavg N) ≤
+      (‖xs - run.x 0‖ ^ 2 / (2 * τ) + ‖ys - run.y 0‖ ^ 2 / (2 * σ)) / N := by
+  have hN0 : (0 : ℝ) < N := Nat.cast_pos.2 hN
+  have hinv : (0 : ℝ) ≤ (N : ℝ)⁻¹ := inv_nonneg.2 hN0.le
+  have hNN : (N : ℝ)⁻¹ * N = 1 := inv_mul_cancel₀ hN0.ne'
+  have hw : ∑ _i ∈ Finset.range N, (N : ℝ)⁻¹ = 1 := by
+    rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul, mul_comm, hNN]
+  set a := ∑ i ∈ Finset.range N, ⟪L (run.x (i + 1)), ys⟫
+  set b := ∑ i ∈ Finset.range N, Gf (run.x (i + 1))
+  set c := ∑ i ∈ Finset.range N, ⟪L xs, run.y (i + 1)⟫
+  set d := ∑ i ∈ Finset.range N, Ff (run.y (i + 1))
+  -- Jensen for `Gf` and `Ff`, linearity for the coupling
+  have hG : Gf (run.xavg N) ≤ (N : ℝ)⁻¹ * b := by
+    have := hGc.map_sum_le (t := Finset.range N) (w := fun _ => (N : ℝ)⁻¹)
+      (p := fun i => run.x (i + 1)) (fun _ _ => hinv) hw (fun i _ => run.x_mem i)
+    simpa only [xavg, smul_eq_mul, ← Finset.mul_sum] using this
+  have hF : Ff (run.yavg N) ≤ (N : ℝ)⁻¹ * d := by
+    have := hFc.map_sum_le (t := Finset.range N) (w := fun _ => (N : ℝ)⁻¹)
+      (p := fun i => run.y (i + 1)) (fun _ _ => hinv) hw (fun i _ => run.y_mem i)
+    simpa only [yavg, smul_eq_mul, ← Finset.mul_sum] using this
+  have ha : ⟪L (run.xavg N), ys⟫ = (N : ℝ)⁻¹ * a := by
+    simp only [xavg, a, map_sum, map_smul, sum_inner, real_inner_smul_left, Finset.mul_sum]
+  have hc : ⟪L xs, run.yavg N⟫ = (N : ℝ)⁻¹ * c := by
+    simp only [yavg, c, inner_sum, real_inner_smul_right, Finset.mul_sum]
+  -- the telescoped gaps
+  have hsum := run.sum_gap_le hM0 hM hτ hσ hκ hxs hys N
+  have hsplit : ∑ i ∈ Finset.range N,
+      (Lag L Gf Ff (run.x (i + 1)) ys - Lag L Gf Ff xs (run.y (i + 1))) =
+        a + b - N * Ff ys - c - N * Gf xs + d := by
+    simp only [Lag, a, b, c, d, Finset.sum_sub_distrib, Finset.sum_add_distrib, Finset.sum_const,
+      Finset.card_range, nsmul_eq_mul]
+    ring
+  rw [hsplit] at hsum
+  have hmul := mul_le_mul_of_nonneg_left hsum hinv
+  have e1 : (N : ℝ)⁻¹ * (N * Ff ys) = Ff ys := by rw [← mul_assoc, hNN, one_mul]
+  have e2 : (N : ℝ)⁻¹ * (N * Gf xs) = Gf xs := by rw [← mul_assoc, hNN, one_mul]
+  rw [div_eq_inv_mul]
+  simp only [Lag]
+  rw [ha, hc]
+  nlinarith [hmul, hG, hF, e1, e2]
 
 /-- **Energy bound** (Chambolle–Pock, Theorem 1(a)): for every `n`,
 `‖x* - x_n‖²/(2τ) + (1-κ) ‖y* - y_n‖²/(2σ) ≤ ‖x* - x_0‖²/(2τ) + ‖y* - y_0‖²/(2σ)`. -/

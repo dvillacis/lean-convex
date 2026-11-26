@@ -58,7 +58,7 @@ Files marked \* were moved here from the formalization of the DC–TVq paper
 | `Convex/Radial` | `x ↦ ψ ‖x‖` is convex iff `ψ` is convex and nondecreasing on `[0, ∞)` (`radial_convex_iff`); convexity of `u ↦ β ∑ᵢ ψ ‖Kᵢ u‖`; derivative of `‖·‖` away from `0`; `C¹` regularity and gradient `∑ᵢ Kᵢ† wᵢ(u)` of `u ↦ β ∑ᵢ j ‖Kᵢ u‖` under `RadialC1 j j'` |
 | `Optimality/FeasibleCone` | cone of feasible directions of a convex set; its closure contains the polar of the normal cone (`mem_closure_feasCone`). DCTVq no longer uses it: its optimality proof now goes through `Extended/SubgradientCalculus` |
 | `Function/Projection` | projection onto `{‖s‖ ≤ λ}` (`projBall`, `projBall_vi`) and onto `[0,1]ⁿ` (`UnitBox.clip`, `clip_vi`); support function of `[0,1]ⁿ` (`UnitBox.box_support`) |
-| `Algorithm/ChambollePock` | PDHGM (`θ = 1`) for `min_x max_y ⟪Lx, y⟫ + G(x) - F(y)` over convex sets, `τσ‖L‖² < 1`: energy inequality, square-summable steps, bounded iterates (`energy_bound`, Thm 1(a) of Chambolle–Pock), cluster points are saddle points, and in finite dimension convergence of the whole sequence to a saddle point (`tendsto_saddle`, Thm 1(c)) |
+| `Algorithm/ChambollePock` | PDHGM (`θ = 1`) for `min_x max_y ⟪Lx, y⟫ + G(x) - F(y)` over convex sets, `τσ‖L‖² < 1`: energy inequality, square-summable steps, bounded iterates (`energy_bound`, Thm 1(a) of Chambolle–Pock), cluster points are saddle points, the ergodic rate `Lag(x̄_N, y) - Lag(x, ȳ_N) ≤ (‖x - x_0‖²/(2τ) + ‖y - y_0‖²/(2σ)) / N` for the averaged iterates (`ergodic_gap`, Thm 1(b)), and in finite dimension convergence of the whole sequence to a saddle point (`tendsto_saddle`, Thm 1(c)) |
 
 ## Build
 
