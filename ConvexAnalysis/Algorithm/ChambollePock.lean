@@ -25,6 +25,10 @@ with `x̄_n = x_n + (x_n - x_{n-1})` (`x̄_0 = x_0`).
 * `Run.summable_step`, `Run.tendsto_dx`, `Run.tendsto_dy` — the steps are square-summable.
 * `Run.bounded` — the iterates are bounded.
 * `Run.cluster_saddle` — every cluster point of `(x_{n+1}, y_{n+1})` is a saddle point.
+* `Run.energy_bound` — Theorem 1(a) of Chambolle–Pock:
+  `‖x* - x_n‖²/(2τ) + (1-κ) ‖y* - y_n‖²/(2σ) ≤ ‖x* - x_0‖²/(2τ) + ‖y* - y_0‖²/(2σ)`.
+* `Run.tendsto_saddle` — Theorem 1(c) of Chambolle–Pock: in finite dimension the whole
+  sequence `(x_n, y_n)` converges to a saddle point.
 * `Run.exists_le` — a continuous function that vanishes at saddle points is `≤ ε` at some
   iterate, for every `ε > 0`.
 -/
@@ -208,6 +212,21 @@ theorem V_lower (n : ℕ) :
   rw [hk]
   nlinarith [hy]
 
+omit hs in
+/-- Upper bound for the energy:
+`V_n ≤ ‖x* - x_n‖²/(2τ) + (1+κ) ‖y* - y_n‖²/(2σ) + 2κ ‖d_n‖²/(2τ)`. -/
+theorem V_upper (n : ℕ) :
+    run.V M xs ys n ≤ ‖xs - run.x n‖ ^ 2 / (2 * τ) +
+      (1 + Real.sqrt (τ * σ * M)) * (‖ys - run.y n‖ ^ 2 / (2 * σ)) +
+      2 * Real.sqrt (τ * σ * M) * (‖dseq run.x n‖ ^ 2 / (2 * τ)) := by
+  have hy := young L hM0 hM hτ hσ (-dseq run.x n) (ys - run.y n)
+  rw [map_neg, inner_neg_left, norm_neg] at hy
+  have hk : Real.sqrt (τ * σ * M) * ‖dseq run.x n‖ ^ 2 / (2 * τ) =
+      Real.sqrt (τ * σ * M) * (‖dseq run.x n‖ ^ 2 / (2 * τ)) := by ring
+  simp only [V]
+  rw [hk]
+  nlinarith [hy]
+
 omit hM0 hM hτ hσ hs in
 lemma V_zero : run.V M xs ys 0 = ‖xs - run.x 0‖ ^ 2 / (2 * τ) + ‖ys - run.y 0‖ ^ 2 / (2 * σ) := by
   simp [V]
@@ -292,6 +311,14 @@ theorem bounded (hκ : τ * σ * M < 1) :
   exact ⟨hbx.trans (le_add_of_nonneg_right (Real.sqrt_nonneg _)),
     hby.trans (le_add_of_nonneg_left (Real.sqrt_nonneg _))⟩
 
+/-- **Energy bound** (Chambolle–Pock, Theorem 1(a)): for every `n`,
+`‖x* - x_n‖²/(2τ) + (1-κ) ‖y* - y_n‖²/(2σ) ≤ ‖x* - x_0‖²/(2τ) + ‖y* - y_0‖²/(2σ)`. -/
+theorem energy_bound (hκ : τ * σ * M < 1) (n : ℕ) :
+    ‖xs - run.x n‖ ^ 2 / (2 * τ) + (1 - Real.sqrt (τ * σ * M)) * (‖ys - run.y n‖ ^ 2 / (2 * σ)) ≤
+      ‖xs - run.x 0‖ ^ 2 / (2 * τ) + ‖ys - run.y 0‖ ^ 2 / (2 * σ) := by
+  rw [← run.V_zero (M := M) (xs := xs) (ys := ys)]
+  exact (run.V_lower hM0 hM hτ hσ n).trans (run.V_le_V_zero hM0 hM hτ hσ hs hκ n)
+
 /-- **Cluster points are saddle points.** Along a subsequence, `(x_{n+1}, y_{n+1})` converges to
 a saddle point of the Lagrangian. -/
 theorem cluster_saddle [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y] (hκ : τ * σ * M < 1)
@@ -350,6 +377,74 @@ theorem cluster_saddle [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y] (hκ 
     have e1 := real_inner_comm (L x') p.2
     have e2 := real_inner_comm (L p.1) p.2
     linarith
+
+/-- **Convergence** (Chambolle–Pock, Theorem 1(c)). The whole sequence `(x_n, y_n)` converges
+to a saddle point of the Lagrangian. The energy `V_n` relative to the cluster saddle point of
+`cluster_saddle` is nonincreasing and tends to `0` along a subsequence, hence tends to `0`. -/
+theorem tendsto_saddle [FiniteDimensional ℝ X] [FiniteDimensional ℝ Y] (hκ : τ * σ * M < 1)
+    (hC : IsClosed C) (hDc : IsClosed D) (hG : Continuous Gf) (hF : Continuous Ff) :
+    ∃ xh yh, IsSaddle L Gf Ff C D xh yh ∧
+      Tendsto (fun n => (run.x n, run.y n)) atTop (𝓝 (xh, yh)) := by
+  obtain ⟨xh, yh, hsad, φ, hφ, hlim⟩ := run.cluster_saddle hM0 hM hτ hσ hs hκ hC hDc hG hF
+  refine ⟨xh, yh, hsad, ?_⟩
+  have hk := one_sub_kappa_pos hκ
+  have hx1 : Tendsto (fun k => run.x (φ k + 1)) atTop (𝓝 xh) :=
+    (continuous_fst.tendsto (xh, yh)).comp hlim
+  have hy1 : Tendsto (fun k => run.y (φ k + 1)) atTop (𝓝 yh) :=
+    (continuous_snd.tendsto (xh, yh)).comp hlim
+  have hd : Tendsto (fun k => dseq run.x (φ k + 1)) atTop (𝓝 0) :=
+    (run.tendsto_dx hM0 hM hτ hσ hs hκ).comp hφ.tendsto_atTop
+  -- the upper bound of `V` tends to `0` along the subsequence
+  have hU : Tendsto (fun k => ‖xh - run.x (φ k + 1)‖ ^ 2 / (2 * τ) +
+      (1 + Real.sqrt (τ * σ * M)) * (‖yh - run.y (φ k + 1)‖ ^ 2 / (2 * σ)) +
+      2 * Real.sqrt (τ * σ * M) * (‖dseq run.x (φ k + 1)‖ ^ 2 / (2 * τ))) atTop (𝓝 0) := by
+    have a := ((tendsto_const_nhds (x := xh)).sub hx1).norm.pow 2 |>.div_const (2 * τ)
+    have b := (((tendsto_const_nhds (x := yh)).sub hy1).norm.pow 2 |>.div_const (2 * σ)).const_mul
+      (1 + Real.sqrt (τ * σ * M))
+    have c := (hd.norm.pow 2 |>.div_const (2 * τ)).const_mul (2 * Real.sqrt (τ * σ * M))
+    have := (a.add b).add c
+    simp only [sub_self, norm_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow,
+      zero_div, mul_zero, add_zero] at this
+    exact this
+  have hV0 : ∀ n, 0 ≤ run.V M xh yh n := fun n => by
+    have h1 := run.V_lower hM0 hM hτ hσ n (xs := xh) (ys := yh)
+    have h2 : 0 ≤ ‖xh - run.x n‖ ^ 2 / (2 * τ) := by positivity
+    have h3 : 0 ≤ (1 - Real.sqrt (τ * σ * M)) * (‖yh - run.y n‖ ^ 2 / (2 * σ)) :=
+      mul_nonneg hk.le (by positivity)
+    linarith
+  have hanti : Antitone fun n => run.V M xh yh n := antitone_nat_of_succ_le fun n => by
+    have h1 := run.energy_step hM0 hM hτ hσ hsad n
+    have h2 := mul_nonneg hk.le (run.step_nonneg hτ hσ n)
+    linarith
+  have hsub : Tendsto (fun k => run.V M xh yh (φ k + 1)) atTop (𝓝 0) :=
+    squeeze_zero (fun k => hV0 _) (fun k => run.V_upper hM0 hM hτ hσ _) hU
+  have hVlim : Tendsto (fun n => run.V M xh yh n) atTop (𝓝 0) := by
+    refine tendsto_order.2 ⟨fun a ha => Eventually.of_forall fun n => ha.trans_le (hV0 n),
+      fun a ha => ?_⟩
+    obtain ⟨k, hk'⟩ := ((tendsto_order.1 hsub).2 a ha).exists
+    filter_upwards [eventually_ge_atTop (φ k + 1)] with n hn
+    exact (hanti hn).trans_lt hk'
+  have hxn : Tendsto (fun n => ‖xh - run.x n‖ ^ 2 / (2 * τ)) atTop (𝓝 0) := by
+    refine squeeze_zero (fun n => by positivity) (fun n => ?_) hVlim
+    have h1 := run.V_lower hM0 hM hτ hσ n (xs := xh) (ys := yh)
+    have h3 : 0 ≤ (1 - Real.sqrt (τ * σ * M)) * (‖yh - run.y n‖ ^ 2 / (2 * σ)) :=
+      mul_nonneg hk.le (by positivity)
+    linarith
+  have hyn : Tendsto (fun n => ‖yh - run.y n‖ ^ 2 / (2 * σ)) atTop (𝓝 0) := by
+    have hdiv := hVlim.div_const (1 - Real.sqrt (τ * σ * M))
+    rw [zero_div] at hdiv
+    refine squeeze_zero (fun n => by positivity) (fun n => ?_) hdiv
+    have h1 := run.V_lower hM0 hM hτ hσ n (xs := xh) (ys := yh)
+    have h2 : 0 ≤ ‖xh - run.x n‖ ^ 2 / (2 * τ) := by positivity
+    rw [le_div_iff₀ hk]
+    linarith
+  have hx := tendsto_zero_of_sq_div (by positivity : (0 : ℝ) < 2 * τ) hxn
+  have hy := tendsto_zero_of_sq_div (by positivity : (0 : ℝ) < 2 * σ) hyn
+  have hx' : Tendsto run.x atTop (𝓝 xh) := by
+    simpa using (tendsto_const_nhds (x := xh)).sub hx
+  have hy' : Tendsto run.y atTop (𝓝 yh) := by
+    simpa using (tendsto_const_nhds (x := yh)).sub hy
+  exact hx'.prodMk_nhds hy'
 
 /-- **Finite termination of a continuous stopping test.** If `Φ` is continuous and `Φ ≤ 0` at
 every saddle point, then for every `ε > 0` some iterate satisfies `Φ(x_{n+1}, y_{n+1}) ≤ ε`. -/

@@ -38,8 +38,10 @@ import ConvexAnalysis.Extended.ConvexIndicator
 import ConvexAnalysis.Extended.ConvexSupport
 import ConvexAnalysis.Extended.EReal
 import ConvexAnalysis.Extended.Epigraph
+import ConvexAnalysis.Extended.FenchelYoung
 import ConvexAnalysis.Extended.IntrinsicInterior
 import ConvexAnalysis.Extended.ProperFunction
+import ConvexAnalysis.Extended.SubgradientCalculus
 import ConvexAnalysis.Function.KL
 import ConvexAnalysis.Function.L1Space
 import ConvexAnalysis.Function.Lsmooth
