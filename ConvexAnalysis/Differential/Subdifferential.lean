@@ -1,13 +1,27 @@
 /-
 Copyright (c) 2024 Anqing Shen, Yifan Bai, Chenyi Li, Zaiwen Wen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Anqing Shen, Yifan Bai, Chenyi Li, Zaiwen Wen
+Authors: Anqing Shen, Yifan Bai, Chenyi Li, Zaiwen Wen
 -/
 import Mathlib.Order.LiminfLimsup
 import Mathlib.Topology.Defs.Filter
 import Mathlib.Data.EReal.Basic
 import ConvexAnalysis.Differential.Calculation
 import ConvexAnalysis.Function.Proximal
+
+/-!
+# Fréchet and limiting subdifferentials
+
+This file defines the Fréchet subdifferential `f_subdifferential` and the limiting
+subdifferential `subdifferential` of a function `f : E → ℝ` on a real inner product space,
+together with `active_domain` and `critial_point`.
+
+The main results are the characterization `has_f_subdiff_iff`, the inclusion
+`subdifferential_subset`, the convex case `convex_f_f_subdiff_eq_subgradient`, the differentiable
+case (`f_subdiff_gradiant`, `subdiff_gradient`), the sum rules `f_subdiff_add'` and `subdiff_add`,
+the optimality condition `first_order_optimality_condition`, and the relation with the proximal
+set `rela_proximal_operator_partial`.
+-/
 
 noncomputable section
 
@@ -17,24 +31,28 @@ variable {E : Type*}
 variable [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 variable {f g : E → ℝ} {x y u v : E} {c : ℝ}
 
-/- the general differential function used in the definition -/
+/-- The difference quotient `y ↦ (f y - f x - ⟪u, y - x⟫) / ‖y - x‖`, as an `EReal`-valued
+function; it is the general differential function used in the definition of the Fréchet
+subdifferential. -/
 def differential_fun (x : E) (f : E → ℝ) (u : E) :=
   fun y ↦ Real.toEReal ((f y - f x - inner ℝ u (y - x)) / ‖y - x‖)
 
-/- the definition of the Frechet subdifferential-/
+/-- The Fréchet subdifferential of `f` at `x`: the set of `v` such that
+`liminf_{y → x, y ≠ x} (f y - f x - ⟪v, y - x⟫) / ‖y - x‖ ≥ 0`. -/
 def f_subdifferential (f : E → ℝ) (x : E) : Set E :=
   {v : E | liminf (differential_fun x f v) (𝓝[≠] x) ≥ 0}
 
-/- the definition of the limit subdifferential-/
+/-- The limiting subdifferential of `f` at `x`: the set of limits `v₀` of sequences `v n` with
+`v n ∈ f_subdifferential f (u n)` for some sequence `u n → x` such that `f (u n) → f x`. -/
 def subdifferential (f : E → ℝ) (x : E) : Set E :=
   {v₀ : E | ∃ u : ℕ → E, Tendsto u atTop (𝓝 x) ∧ Tendsto (fun n ↦ f (u n)) atTop (𝓝 (f x))
     ∧ (∃ v : ℕ → E, ∀ n, v n ∈ f_subdifferential f (u n) ∧ Tendsto v atTop (𝓝 v₀))}
 
-/- the domain of the function is the points whose subifferential are non empty -/
+/-- The set of points at which the limiting subdifferential of `f` is nonempty. -/
 def active_domain (f : E → ℝ) : Set E :=
   {x | subdifferential f x ≠ ∅}
 
-/- the critial point of a function -/
+/-- The set of critical points of `f`: the points `x` with `0 ∈ subdifferential f x`. -/
 def critial_point (f : E → ℝ) : Set E :=
   {x | 0 ∈ subdifferential f x}
 
@@ -78,7 +96,7 @@ theorem has_f_subdiff_iff : u ∈ f_subdifferential f x ↔
     have := (lt_div_iff₀ (norm_sub_pos_iff.2 hy)).1 (EReal.coe_lt_coe_iff.1 (lt_of_lt_of_le ha h))
     linarith
   · intro h
-    show 0 ≤ sSup sa
+    change 0 ≤ sSup sa
     rw [le_sSup_iff]
     intro b hb
     rw [mem_upperBounds] at hb
@@ -121,16 +139,16 @@ theorem has_f_subdiff_iff : u ∈ f_subdifferential f x ↔
         rw [mem_ofPred]
         filter_upwards [h'] with y
         exact le_of_lt
-      · show b < b / Real.toEReal 2
+      · change b < b / Real.toEReal 2
         rw [← heq, ← EReal.coe_div, EReal.coe_lt_coe_iff]
         linarith
 
 /-- frechet subdifferential is a subset of limit subdifferential -/
-theorem subdifferential_subset (f : E → ℝ) (x : E): f_subdifferential f x ⊆ subdifferential f x :=
+theorem subdifferential_subset (f : E → ℝ) (x : E) : f_subdifferential f x ⊆ subdifferential f x :=
   fun v vin ↦ ⟨(fun _ ↦ x), tendsto_const_nhds, tendsto_const_nhds,
   ⟨fun _ ↦ v, fun _ ↦ ⟨vin, tendsto_const_nhds⟩⟩⟩
 
-/-- if f is a convex function, Frechet subdifferential is equal to subgradient-/
+/-- if f is a convex function, Frechet subdifferential is equal to subgradient -/
 theorem convex_f_f_subdiff_eq_subgradient (f : E → ℝ) (x : E)
     (hconv : ConvexOn ℝ univ f) : f_subdifferential f x = SubderivAt f x := by
   rw [SubderivAt]
@@ -323,7 +341,7 @@ theorem convex_f_f_subdiff_eq_subgradient (f : E → ℝ) (x : E)
 
 /-- correlation of the Frechet subdifferential between negative function -/
 theorem f_subdiff_neg_f_subdiff_unique (hu : u ∈ f_subdifferential f x)
-    (hv : v ∈ f_subdifferential (- f) x) : u = - v := by
+    (hv : v ∈ f_subdifferential (-f) x) : u = - v := by
   rw [has_f_subdiff_iff] at *
   have h : ∀ ε > 0, ∀ᶠ y in 𝓝 x, inner ℝ (u + v) (y - x) ≤ ε * ‖y - x‖ := by
     intro ε εpos
@@ -385,7 +403,7 @@ theorem first_order_optimality_condition (f : E → ℝ) (x₀ : E) (hx : IsLoca
   linarith
 
 /-- first order optimality condition for unconstrained optimization problem -/
-theorem first_order_optimality_condition' (f : E → ℝ) (x₀ : E) (hx: IsLocalMin f x₀) :
+theorem first_order_optimality_condition' (f : E → ℝ) (x₀ : E) (hx : IsLocalMin f x₀) :
     (0 : E) ∈ subdifferential f x₀ := by
   obtain hcon := subdifferential_subset f x₀
   apply hcon; exact first_order_optimality_condition f x₀ hx
@@ -400,7 +418,7 @@ variable {E : Type*}
 variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable {f g : E → ℝ} {x y u v : E} {c : ℝ}
 
-/--an equal statement for differential function in Frechet subdifferential-/
+/-- an equal statement for differential function in Frechet subdifferential -/
 theorem HasGradientAt_iff_f_subdiff :
     HasGradientAt f u x ↔ u ∈ f_subdifferential f x ∧ -u ∈ f_subdifferential (-f) x := by
   rw [hasGradientAt_iff_isLittleO, Asymptotics.isLittleO_iff]
@@ -423,8 +441,8 @@ theorem HasGradientAt_iff_f_subdiff :
     rw [Real.norm_eq_abs, abs_le]
     constructor <;> linarith
 
-/-- the Frechet subdifferential of a differentiable function is its gradient set-/
-theorem f_subdiff_gradiant (f : E → ℝ) (f': E → E) (z : E)(hf : HasGradientAt f (f' z) z) :
+/-- the Frechet subdifferential of a differentiable function is its gradient set -/
+theorem f_subdiff_gradiant (f : E → ℝ) (f' : E → E) (z : E) (hf : HasGradientAt f (f' z) z) :
     f_subdifferential f z = {f' z} := by
   ext u
   rw [mem_singleton_iff]
@@ -433,9 +451,9 @@ theorem f_subdiff_gradiant (f : E → ℝ) (f': E → E) (z : E)(hf : HasGradien
   · exact fun h ↦(neg_neg (f' z)) ▸ (f_subdiff_neg_f_subdiff_unique h hf.2)
   · exact fun h ↦ h ▸ hf.1
 
-/-- the subdifferential of a differentiable function is its gradient set-/
-theorem subdiff_gradient (f : E → ℝ) (f': E → E) (hf : ∀ x₁, HasGradientAt f (f' x₁) x₁)
-    (gradcon: Continuous f') (z : E) : subdifferential f z = {f' z} := by
+/-- the subdifferential of a differentiable function is its gradient set -/
+theorem subdiff_gradient (f : E → ℝ) (f' : E → E) (hf : ∀ x₁, HasGradientAt f (f' x₁) x₁)
+    (gradcon : Continuous f') (z : E) : subdifferential f z = {f' z} := by
   rw [subdifferential]
   ext x
   constructor
@@ -489,10 +507,10 @@ lemma f_subdiff_prox (h : prox_prop f y x) : y - x ∈ f_subdifferential f x := 
     simp only [Pi.add_apply, add_neg_cancel_right]
   exact hf ▸ this
 
-/--if one function is differentiable, the Frechet subdifferential of the sum of two functions
-can be transverted to the sum of Frechet subdifferential for each function-/
-theorem f_subdiff_add' (f : E → ℝ ) (g : E → ℝ ) (g' : E → E) (x : E)
-    (hg : ∀ x₁, HasGradientAt g (g' x₁) x₁) (z : E):
+/-- if one function is differentiable, the Frechet subdifferential of the sum of two functions
+can be transverted to the sum of Frechet subdifferential for each function -/
+theorem f_subdiff_add' (f : E → ℝ) (g : E → ℝ) (g' : E → E) (x : E)
+    (hg : ∀ x₁, HasGradientAt g (g' x₁) x₁) (z : E) :
     z ∈ f_subdifferential (f + g) x ↔ ∃ zf ∈ f_subdifferential f x , ∃ zg ∈ f_subdifferential g x ,
     z = zf + zg := by
   constructor
@@ -526,11 +544,11 @@ theorem f_subdiff_add' (f : E → ℝ ) (g : E → ℝ ) (g' : E → E) (x : E)
     apply f_subdiff_add;
     repeat' assumption
 
-/--if one function is smooth, the subdifferential of the sum of two functions
-can be transverted to the sum of subdifferential for each function-/
+/-- if one function is smooth, the subdifferential of the sum of two functions
+can be transverted to the sum of subdifferential for each function -/
 theorem subdiff_add (f : E → ℝ) (g : E → ℝ) (g' : E → E) (x : E)
     (hg : ∀ x₁, HasGradientAt g (g' x₁) x₁) (gcon : Continuous g)
-      (gradcon : Continuous g') (z : E):
+      (gradcon : Continuous g') (z : E) :
         z ∈ subdifferential (f + g) x ↔ ∃ zf ∈ subdifferential f x,
           ∃ zg ∈ subdifferential g x, z = zf + zg := by
   constructor
@@ -597,13 +615,11 @@ theorem subdiff_add (f : E → ℝ) (g : E → ℝ) (g' : E → E) (x : E)
           apply hN n nge
         apply Tendsto.sub vtends
         assumption
-
     · use g' x
       constructor
       · rw[subdiff_gradient g g' hg gradcon]
         simp
       · simp
-
   · intro zin
     rcases zin with ⟨zf,zfin,zg,zgin,fgadd⟩
     rw[fgadd,subdifferential,mem_ofPred]
@@ -685,8 +701,8 @@ theorem subdiff_add (f : E → ℝ) (g : E → ℝ) (g' : E → E) (x : E)
 lemma f_subdiff_smul_prox (h : prox_prop (c • f) u x) (cpos : 0 < c) :
     c⁻¹ • (u - x) ∈ f_subdifferential f x := f_subdiff_smul (f_subdiff_prox h) cpos
 
-/--the relation between subdifferential and poximal set-/
-theorem rela_proximal_operator_partial (f : E → ℝ )(x : E)(u : E) :
+/-- the relation between subdifferential and poximal set -/
+theorem rela_proximal_operator_partial (f : E → ℝ) (x : E) (u : E) :
     u ∈ prox_set f x → (x - u) ∈ subdifferential f u:=by
   intro uporx
   rw [prox_set, mem_ofPred, prox_prop] at uporx
@@ -725,3 +741,5 @@ theorem rela_proximal_operator_partial (f : E → ℝ )(x : E)(u : E) :
   rw [zfeq] at zfin
   simp at zfin
   assumption
+
+end

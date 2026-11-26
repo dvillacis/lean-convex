@@ -1,8 +1,7 @@
 /-
 Copyright (c) 2023 Chenyi Li, Ziyu Wang, Zaiwen Wen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Chenyi Li, Ziyu Wang, Yuxuan Wu, Junda Ying,
-         Hongjia Chen, Shengyang Xu, Zaiwen Wen
+Authors: Chenyi Li, Ziyu Wang, Yuxuan Wu, Junda Ying, Hongjia Chen, Shengyang Xu, Zaiwen Wen
 -/
 import Mathlib.Topology.EMetricSpace.Lipschitz
 import Mathlib.Analysis.Calculus.Deriv.Pow
@@ -26,7 +25,8 @@ The main theorem is given as:
 
 * We prove the properties of a convex l-Lipschitz smooth function
 
-  Let f be a differentiable convex function defined on ℝ^n, then the following statement is equivalent
+  Let f be a differentiable convex function defined on ℝ^n, then the following statement is
+  equivalent
 
     (a) `f` is `l` - Lipschitz smooth on ℝ^n.
 
@@ -192,13 +192,13 @@ section Convex
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
-variable {f : E → ℝ} {a : ℝ} {f': E → E} {xm : E}
+variable {f : E → ℝ} {a : ℝ} {f' : E → E} {xm : E}
 variable {x y : E} {s v : Set E} {l : NNReal}
 
 open Set
 
 theorem lipschitz_to_lnorm_sub_convex (hs : Convex ℝ s)
-    (h₁ : ∀ x ∈ s, HasGradientAt f (f' x) x) (h₂ : LipschitzOnWith l f' s) (hl : l > 0) :
+    (h₁ : ∀ x ∈ s, HasGradientAt f (f' x) x) (h₂ : LipschitzOnWith l f' s) (_hl : l > 0) :
     ConvexOn ℝ s (fun x ↦ l / 2 * ‖x‖ ^ 2 - f x) := by
   rw [lipschitzOnWith_iff_norm_sub_le] at h₂
   let g' : E → E := fun x ↦ l.1 • x - f' x
@@ -406,13 +406,13 @@ theorem lipschitz_to_lower (h₁ : ∀ x, HasGradientAt f (f' x) x) (h₂ : Lips
     lipschitz_to_lnorm_sub_convex convex_univ (fun x _ => h₁ x) (lipschitzOnWith_univ.mpr h₂) hl
   exact convex_to_lower h₁ convex hl hfun
 
-theorem lower_iff_lipschitz (h₁ : ∀ x, HasGradientAt f (f' x) x) (hfun: ConvexOn ℝ Set.univ f)
+theorem lower_iff_lipschitz (h₁ : ∀ x, HasGradientAt f (f' x) x) (hfun : ConvexOn ℝ Set.univ f)
     (hl : l > 0) : LipschitzWith l f' ↔
     ∀ x y, inner ℝ (f' x - f' y) (x - y) ≥ 1 / l * ‖f' x - f' y‖ ^ 2 :=
   ⟨fun h ↦ lipschitz_to_lower h₁ h hfun hl, fun h ↦ lower_to_lipschitz h hl⟩
 
 theorem lipshictz_iff_lnorm_sub_convex (h₁ : ∀ x, HasGradientAt f (f' x) x)
-    (hfun: ConvexOn ℝ Set.univ f) (hl : l > 0) : LipschitzWith l f' ↔
+    (hfun : ConvexOn ℝ Set.univ f) (hl : l > 0) : LipschitzWith l f' ↔
     ConvexOn ℝ univ (fun x ↦ l / 2 * ‖x‖ ^ 2 - f x) := by
   constructor
   · intro h
@@ -422,7 +422,7 @@ theorem lipshictz_iff_lnorm_sub_convex (h₁ : ∀ x, HasGradientAt f (f' x) x)
   exact fun x y => convex_to_lower h₁ h' hl hfun x y
 
 theorem lower_iff_lnorm_sub_convex (h₁ : ∀ x, HasGradientAt f (f' x) x)
-    (hfun: ConvexOn ℝ Set.univ f) (hl : l > 0) : ConvexOn ℝ univ (fun x ↦ l / 2 * ‖x‖ ^ 2 - f x)
+    (hfun : ConvexOn ℝ Set.univ f) (hl : l > 0) : ConvexOn ℝ univ (fun x ↦ l / 2 * ‖x‖ ^ 2 - f x)
     ↔ ∀ x y, inner ℝ (f' x - f' y) (x - y) ≥ 1 / l * ‖f' x - f' y‖ ^ 2  := by
   rw [← lipshictz_iff_lnorm_sub_convex h₁ hfun hl]
   rw [lower_iff_lipschitz h₁ hfun hl]

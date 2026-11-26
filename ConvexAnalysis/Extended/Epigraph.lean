@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025  Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
+Copyright (c) 2025 Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
+Authors: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
 -/
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.LinearAlgebra.Dual.Basis
@@ -40,6 +40,8 @@ variable {E : Type*}
 Definition. Epigraph of a EReal function `f` over a set `s` is the region
 above the graph of `f` on `s`.
 -/
+/-- The epigraph of `f : E → EReal` over `s`: the pairs `(x, r) ∈ E × ℝ` with `x ∈ s` and
+`f x ≤ r`. -/
 def Function.Epi (f : E → EReal) (s : Set E) : Set (E × ℝ) :=
   {p : E × ℝ | p.1 ∈ s ∧ f p.1 ≤ p.2}
 
@@ -77,7 +79,7 @@ theorem epi_inter_iff_forall :
     f.Epi s = ⋂ i, ((g i).Epi s) ↔
     (∀ (x : E) (w : ℝ), (x ∈ s ∧ f x ≤ w ↔ (∀ i, x ∈ s ∧ g i x ≤ w))) := by
   simp [Function.Epi]
-  rw[Set.iInter_setOf, Set.ext_iff]
+  rw[Set.iInter_ofPred, Set.ext_iff]
   simp
 
 /-!
@@ -339,7 +341,7 @@ lemma convex_epi_convex_ineq_of_bot_within [NormedSpace ℝ E] (hf : Convex ℝ 
   obtain h4 := (hf h3 h2 hp hq hpq).2
   simp at h4; rw [h1] at h4; norm_cast at h4
   have h5 : ¬ r ≤ p • ((r - q • rn)/p - 1) + q • rn := by
-    push_neg at *
+    push Not at *
     rw [smul_sub p ((r - q • rn) / p) 1]
     simp; field_simp [hpq0.1]
     have : r - q * rn - p + q * rn = r - p := by linarith
@@ -373,7 +375,7 @@ theorem convex_epi_convex_ineq_of_bot [NormedSpace ℝ E] (hf : Convex ℝ (Epi 
   Then consider any point inside the line segment of the convex combination.
   Since f x = -∞ or f y = -∞, we transform the proof goal to f (a • x + b • y) ≤ -∞.
   -/
-  push_neg at c1
+  push Not at c1
   rcases h with hx_bot | hy_bot /- First consider f x = ⊥, actually x and y are symmetric,
   so we write a lemma here. -/
   · exact convex_epi_convex_ineq_of_bot_within hf hx h_dom ha hb c1 hab hx_bot y hy
@@ -405,7 +407,7 @@ lemma convex_epigraph_convex [NormedSpace ℝ E] (hf : Convex ℝ (f.Epi s)) :
   one of the points x and y is -∞, and a lemma has been written for this.
   -/
   · exact convex_epi_convex_ineq_of_bot hf hx hy (convex_epigraph_dom_convex hf) ha hb hab h
-  push_neg at h
+  push Not at h
   /-
   The case where f x ≠ -∞ and f y ≠ -∞.
   Since we are considering on dom s f, we have -∞ < f x, f y < ∞,
@@ -664,7 +666,8 @@ Lemma. For any `x ∈ s`, if `(x, a)` lies in the closure of the epigraph of `f`
 then `(x, b)` also lies in the closure of the epigraph of `f` on `s`.
 Purpose: extend closure membership from `a` to any `b` above it.
 -/
-lemma in_of_le_sinf {x : E} {a b : EReal} (hx : x ∈ s) (ha : (x, a) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2})
+lemma in_of_le_sinf {x : E} {a b : EReal} (hx : x ∈ s)
+    (ha : (x, a) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2})
     (hab : a ≤ b) :
     (x, b) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2} := by
   by_cases hatop : a = ⊤
@@ -728,6 +731,8 @@ This defines a function `closure_epi` that maps each point `x` in `E` to the inf
 `w` such that `(x, w)` lies in the closure of the epigraph of `f` on `s`.
 Purpose: An equivalent way to describe the closure.
 -/
+/-- The function `x ↦ sInf {w | (x, w) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2}}`: the
+lower boundary of the closure of the epigraph of `f` on `s`, taken in `E × EReal`. -/
 noncomputable def closure_epi (s : Set E) (f : E → EReal) :=
     fun x => sInf {w | (x, w) ∈ closure {p : E × EReal | p.1 ∈ s ∧ f p.1 ≤ p.2}}
 
@@ -832,7 +837,8 @@ Lemma. Let `f` be a proper function over `s`, and `x ∈ s` such that `f x < ⊤
 then `(x, f(x))` is in the epigraph of `f` over `s`.
 Purpose: a trivial property of epigraph.
 -/
-lemma xfxinepif {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f] (htop : f x < ⊤) (hx : x ∈ s) :
+lemma xfxinepif {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f]
+    (htop : f x < ⊤) (hx : x ∈ s) :
     (x, (f x).toReal) ∈ f.Epi s := by
   simp [Function.Epi]
   rw[← EReal.coe_toReal (x := f x) (LT.lt.ne_top htop) (LT.lt.ne_bot (hsf.uninfinity x hx))]
@@ -843,7 +849,8 @@ Lemma. Let `f` be a proper function over `s`, and `x ∈ s` such that `f x < ⊤
 then `(x, f(x) - 1)` is not an element of epigraph of `f` over `s`.
 Purpose: a trivial property of epigraph.
 -/
-lemma disj {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f] (htop : f x < ⊤) (hx : x ∈ s) :
+lemma disj {s : Set E} {f : E → EReal} {x : E} [hsf : ProperFunction s f]
+    (htop : f x < ⊤) (hx : x ∈ s) :
     (x, (f x).toReal - 1) ∉ f.Epi s := by
   simp [Function.Epi]
   intro _

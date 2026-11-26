@@ -48,8 +48,8 @@ then there exist a convex open set in s and f is upperbounded on s.
 * `FiniteDimensionalConvexFunctionsLocallyLipschitz` : Each convex function on an open convex
 subset of FiniteDimensional space is locally Lipschitz
 
-* `FiniteDimensionalConvexFunctionsContinous` : Each convex function on an open convex subset of FiniteDimensional space
-is continuous
+* `FiniteDimensionalConvexFunctionsContinous` : Each convex function on an open convex subset of
+FiniteDimensional space is continuous
 
 -/
 open Set InnerProductSpace Topology Filter Metric Bornology Real FiniteDimensional
@@ -62,14 +62,14 @@ section Boundedness
 
 
 variable {X : Type*} [SeminormedAddCommGroup X] [NormedSpace ℝ X]
-    {x₀ : X}{r : ℝ}{f : X → ℝ}
+    {x₀ : X} {r : ℝ} {f : X → ℝ}
 
 /--
 Let X be a normed space, x₀ ∈ X, r > 0.Let f : B(x₀, r) → R be a convex function.
 If f is upperbounded on B(x₀, r), then bounded on B(x₀, r).
 -/
 lemma Bounded_of_UpperBounded (hf : ConvexOn ℝ (ball x₀ r) f)
-    (f_upperbounded: BddAbove (f '' (ball x₀ r))) : IsBounded (f '' (ball x₀ r)) := by
+    (f_upperbounded : BddAbove (f '' (ball x₀ r))) : IsBounded (f '' (ball x₀ r)) := by
   dsimp [BddAbove,upperBounds]at f_upperbounded
   rcases f_upperbounded with ⟨m,hm⟩
   simp only [mem_image, mem_ball, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂,
@@ -123,9 +123,9 @@ lemma Bounded_of_UpperBounded (hf : ConvexOn ℝ (ball x₀ r) f)
 Let X be a normed space, x₀ ∈ X, r > 0.Let f : B(x₀, r) → R be a convex function.
 If f is bounded on B(x₀, r) and ε ∈ (0, r), then f is Lipschitz on B(x₀, r − ε).
 -/
-lemma Lipschitz_of_Bounded [T0Space X](hf : ConvexOn ℝ (ball x₀ r) f)
-    (f_bounded: IsBounded (f '' (ball x₀ r)))
-    {ε : ℝ}(hε :0 < ε ∧ ε < r): ∃ K , LipschitzOnWith K f (ball x₀ (r - ε)) := by
+lemma Lipschitz_of_Bounded [T0Space X] (hf : ConvexOn ℝ (ball x₀ r) f)
+    (f_bounded : IsBounded (f '' (ball x₀ r)))
+    {ε : ℝ} (hε : 0 < ε ∧ ε < r) : ∃ K , LipschitzOnWith K f (ball x₀ (r - ε)) := by
   rw[isBounded_iff_subset_ball 0] at f_bounded
   rcases f_bounded with ⟨M , hM⟩
   let K := 2 * |M| / ε
@@ -140,7 +140,6 @@ lemma Lipschitz_of_Bounded [T0Space X](hf : ConvexOn ℝ (ball x₀ r) f)
   intro x hx y hy
   rw[Real.dist_eq,dist_eq_norm]
   rw[convexOn_iff_forall_pos] at hf
-
   have oneside {uy vx : X}(h : uy ≠ vx)
       (hu : uy ∈ ball x₀ (r - ε))(hv : vx ∈ ball x₀ (r - ε))
       :f uy - f vx ≤ K * ‖uy - vx‖ := by
@@ -252,9 +251,9 @@ Let X be a normed space, x₀ ∈ X, r > 0.Let f : B(x₀, r) → R be a convex 
 If f is upperbounded on B(x₀, r) and ε ∈ (0, r)
 then f is Lipschitz on B(x₀, r − ε).
 -/
-theorem Lipschitz_of_UpperBounded [T0Space X](hf : ConvexOn ℝ (ball x₀ r) f)
-    (f_upperbounded: BddAbove (f '' (ball x₀ r)))
-    {ε : ℝ}(hε :0 < ε ∧ ε < r): ∃ K , LipschitzOnWith K f (ball x₀ (r - ε)) := by
+theorem Lipschitz_of_UpperBounded [T0Space X] (hf : ConvexOn ℝ (ball x₀ r) f)
+    (f_upperbounded : BddAbove (f '' (ball x₀ r)))
+    {ε : ℝ} (hε : 0 < ε ∧ ε < r) : ∃ K , LipschitzOnWith K f (ball x₀ (r - ε)) := by
   apply Lipschitz_of_Bounded hf _ hε
   apply Bounded_of_UpperBounded hf f_upperbounded
 
@@ -262,8 +261,8 @@ theorem Lipschitz_of_UpperBounded [T0Space X](hf : ConvexOn ℝ (ball x₀ r) f)
 If f is upper bounded on a open subset of s ,
 then f is locally Lipschitz on s
 -/
-theorem LocallyLipschitzOn_of_UpperBounded [T0Space X]{s : Set X}(hs : IsOpen s)
-    (f_upperbounded : BddAbove (f '' s)) (f_convex : ConvexOn ℝ s f):
+theorem LocallyLipschitzOn_of_UpperBounded [T0Space X] {s : Set X} (hs : IsOpen s)
+    (f_upperbounded : BddAbove (f '' s)) (f_convex : ConvexOn ℝ s f) :
     LocallyLipschitzOn s f := by
   dsimp [LocallyLipschitzOn]
   intro x hx
@@ -296,17 +295,16 @@ section LocallyBoundedness
 
 variable {α : Type*}
     [NormedAddCommGroup α] [InnerProductSpace ℝ α] [FiniteDimensional ℝ α]
-    {f : α → ℝ}{s : Set α}
+    {f : α → ℝ} {s : Set α}
 /--
 Let X be a finite dimensional space.Let s is open convex set and f : s → R be a convex function.
 Then ∃ open convex set t which contain x , and f is upperbounded on t.
 -/
-lemma LocallyUpperBounded (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)
+lemma LocallyUpperBounded (hs_convex : Convex ℝ s) (hs_isopen : IsOpen s)
     (hf : ConvexOn ℝ s f) : ∀ x ∈ s , ∃ t ∈ 𝓝[s] x ,Convex ℝ t ∧ IsOpen t ∧ BddAbove (f '' t) := by
   rw[Metric.isOpen_iff] at hs_isopen
   intro x hx
   rcases hs_isopen x hx with ⟨r₀ , hr₀⟩
-
   let r := r₀ / 2
   have r_pos : r > 0 := by simp[r];apply hr₀.1
   let n := Module.finrank ℝ α
@@ -319,7 +317,7 @@ lemma LocallyUpperBounded (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)
   change Module.Basis ι ℝ α at b
   by_cases hn : n = 0
   · have : Module.finrank ℝ α = 0 := by
-      show n = 0;apply hn;
+      change n = 0;apply hn;
     rw[Module.finrank_zero_iff] at this
     use s
     simp only [isOpen_discrete, true_and]
@@ -333,9 +331,7 @@ lemma LocallyUpperBounded (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)
     have : a = x := by apply Subsingleton.allEq
     rw[this]
   have n_pos : n > 0 := Nat.zero_lt_of_ne_zero hn
-
   let fin0 : ι := ⟨0, n_pos⟩
-
   let u₀ := (⋃ (i : ι), {(r / ‖b i‖) • (b i)})  ∪  (⋃ (i : ι),{- (r / ‖b i‖) • (b i)})
   let u := {x} + u₀
   have u₀_isFinite : u₀.Finite := by
@@ -378,14 +374,11 @@ lemma LocallyUpperBounded (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)
         _ = r₀ / 2:= by rw[abs_of_pos hr₀.1]
         _ < r₀ := by linarith
       apply bi_pos
-
   let U := convexHull ℝ u
   let t := interior U
   use t
   have t_isopen : IsOpen t := isOpen_interior
-
   let xBall :=  σ.toFun ⁻¹' (ball (σ.toFun x) r)
-
   have xBall_isopen : IsOpen xBall:= by
     simp[xBall]
     apply Continuous.isOpen_preimage (ContinuousLinearMap.continuous σ)
@@ -425,8 +418,9 @@ lemma LocallyUpperBounded (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)
   apply ConvexOn.le_sup_of_mem_convexHull hf _ hx
   apply subset_convexHull
 
+omit [FiniteDimensional ℝ α] in
 lemma LocallyLipschitz_of_LocallyUpperBounded (hs : IsOpen s)
-    (h : ∀ x ∈ s , ∃ t ∈ 𝓝[s] x , Convex ℝ t ∧ IsOpen t ∧ BddAbove (f '' t))
+    (h : ∀ x ∈ s, ∃ t ∈ 𝓝[s] x, Convex ℝ t ∧ IsOpen t ∧ BddAbove (f '' t))
     (hf : ConvexOn ℝ s f)
     : LocallyLipschitzOn s f := by
   dsimp [LocallyLipschitzOn]
@@ -467,17 +461,17 @@ end LocallyBoundedness
 
 section Continuity
 
-variable {α : Type*}{β : Type*}
+variable {α : Type*} {β : Type*}
     [NormedAddCommGroup α] [InnerProductSpace ℝ α] [FiniteDimensional ℝ α]
-    {f : α → ℝ}{s : Set α}
+    {f : α → ℝ} {s : Set α}
 
 /-
 Each convex function on an open convex subset of FiniteDimensional space
 is locally Lipschitz
 -/
 theorem FiniteDimensionalConvexFunctionsLocallyLipschitz
-    (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)(hf : ConvexOn ℝ s f)
-    : LocallyLipschitzOn s f :=by
+    (hs_convex : Convex ℝ s) (hs_isopen : IsOpen s) (hf : ConvexOn ℝ s f)
+    : LocallyLipschitzOn s f := by
   apply LocallyLipschitz_of_LocallyUpperBounded hs_isopen _ hf
   apply LocallyUpperBounded hs_convex hs_isopen hf
 
@@ -486,7 +480,7 @@ Each convex function on an open convex subset of FiniteDimensional space
 is continuous
 -/
 theorem FiniteDimensionalConvexFunctionsContinous
-    (hs_convex : Convex ℝ s)(hs_isopen : IsOpen s)(hf : ConvexOn ℝ s f)
+    (hs_convex : Convex ℝ s) (hs_isopen : IsOpen s) (hf : ConvexOn ℝ s f)
     : ContinuousOn f s := by
   apply LocallyLipschitzOn.continuousOn
   apply FiniteDimensionalConvexFunctionsLocallyLipschitz hs_convex hs_isopen hf

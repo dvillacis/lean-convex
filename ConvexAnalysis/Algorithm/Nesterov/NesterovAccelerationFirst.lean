@@ -10,7 +10,8 @@ import ConvexAnalysis.Function.Proximal
 
 ## Main results
 
-  This file mainly concentrates on the first version of Nesterov algorithm for composite optimization problems.
+  This file mainly concentrates on the first version of Nesterov algorithm for
+  composite optimization problems.
 
   We prove the O(1 / k ^ 2) rate for this algorithm.
 
@@ -25,8 +26,22 @@ variable {f h : E → ℝ} {f' : E → E} {x0 : E}
 
 open Set Real
 
-class Nesterov_first (f h: E → ℝ) (f' : E → E) (x0 : E) where
-  (l : NNReal) (x y : ℕ → E) (t γ : ℕ → ℝ) (hl : l > (0 : ℝ))
+/-- The first version of Nesterov's accelerated proximal gradient method for `f + h`, started
+at `x0`: `y k = x k + (γ k * (1 - γ (k - 1)) / γ (k - 1)) • (x k - x (k - 1))` and `x (k + 1)`
+is a proximal point of `t k • h` at `y k - t k • f' (y k)`. Here `f` and `h` are convex and the
+gradient `f'` of `f` is `l`-Lipschitz. -/
+class Nesterov_first (f h : E → ℝ) (f' : E → E) (x0 : E) where
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (l : NNReal)
+  /-- The sequence of iterates. -/
+  (x : ℕ → E)
+  /-- The sequence of extrapolated points, at which the gradient of `f` is evaluated. -/
+  (y : ℕ → E)
+  /-- The sequence of step sizes. -/
+  (t : ℕ → ℝ)
+  /-- The sequence of extrapolation parameters. -/
+  (γ : ℕ → ℝ)
+  (hl : l > (0 : ℝ))
   (h₁ : ∀ x : E, HasGradientAt f (f' x) x) (convf : ConvexOn ℝ univ f)
   (h₂ : LipschitzWith l f') (convh : ConvexOn ℝ univ h)
   (oriy : y 0 = x 0) (oriγ : γ 0 = 1) (initial : x 0 = x0)
@@ -194,7 +209,8 @@ theorem Nesterov_first_converge (minφ : IsMinOn (f + h) univ xm) :
           (‖alg.y k - (1 - alg.γ k) • (alg.x k) - (alg.γ k) • xm‖ ^ 2
           - ‖alg.x (k + 1) - (1 - alg.γ k) • (alg.x k) - (alg.γ k) • xm‖ ^ 2) := φieq3
       _ = (alg.γ k) ^ 2 / (2 * alg.t k) * (‖v k - xm‖ ^ 2 - ‖v (k + 1) - xm‖ ^ 2) := by
-        rw [eq k, add_sub_cancel_left, ← smul_sub, mul_sub, mul_sub, norm_smul, mul_pow, norm_eq_abs]
+        rw [eq k, add_sub_cancel_left, ← smul_sub, mul_sub, mul_sub, norm_smul, mul_pow,
+          norm_eq_abs]
         rw [sq_abs, mul_left_comm, ← mul_assoc, mul_one_div]
         have h9 : 1 / (2 * alg.t k) * ‖alg.x (k + 1)
             - (1 - alg.γ k) • alg.x k - alg.γ k • xm‖ ^ 2 =
@@ -293,16 +309,29 @@ variable {f h : E → ℝ} {f' : E → E} {x0 : E}
 
 open Set Real PNat
 
-class Nesterov_first_fix_stepsize (f h: E → ℝ) (f' : E → E) (x0 : E) where
-  (l : NNReal) (hl : l > (0 : ℝ))
+/-- The first version of Nesterov's accelerated proximal gradient method for `f + h` with the
+fixed step size `t n = 1 / l` and the parameters `γ n = 2 / (2 + n)`, where `l` is the
+Lipschitz constant of the gradient `f'` of `f`. -/
+class Nesterov_first_fix_stepsize (f h : E → ℝ) (f' : E → E) (x0 : E) where
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (l : NNReal)
+  (hl : l > (0 : ℝ))
   (h₁ : ∀ x : E, HasGradientAt f (f' x) x) (convf: ConvexOn ℝ univ f)
   (h₂ : LipschitzWith l f') (convh : ConvexOn ℝ univ h)
-  (x y : ℕ → E) (t γ : ℕ → ℝ) (oriy : y 0 = x 0) (initial : x 0 = x0)
+  /-- The sequence of iterates. -/
+  (x : ℕ → E)
+  /-- The sequence of extrapolated points, at which the gradient of `f` is evaluated. -/
+  (y : ℕ → E)
+  /-- The sequence of step sizes, `t n = 1 / l`. -/
+  (t : ℕ → ℝ)
+  /-- The sequence of extrapolation parameters, `γ n = 2 / (2 + n)`. -/
+  (γ : ℕ → ℝ)
+  (oriy : y 0 = x 0) (initial : x 0 = x0)
   (teq : ∀ n : ℕ, t n = 1 / l) (γeq : ∀ n : ℕ, γ n = 2 / (2 + n))
   update1 : ∀ (k : ℕ+), y k = x k + (γ k * (1 - γ (k - 1)) / (γ (k - 1))) • (x k - x (k - 1))
   update2 : ∀ k:ℕ, prox_prop (t k • h) (y k - t k • f' (y k)) (x (k + 1))
 
-instance {f h: E → ℝ} {f' : E → E} {x0 : E} [p : Nesterov_first_fix_stepsize f h f' x0] :
+instance {f h : E → ℝ} {f' : E → E} {x0 : E} [p : Nesterov_first_fix_stepsize f h f' x0] :
     Nesterov_first f h f' x0 where
   l := p.l
   h₁ := p.h₁
@@ -331,7 +360,7 @@ variable {alg : Nesterov_first_fix_stepsize f h f' x0}
 
 variable {xm : E} (minφ : IsMinOn (f + h) univ xm)
 
-theorem Nesterov_first_fix_stepsize_converge (minφ : IsMinOn (f + h) univ xm):
+theorem Nesterov_first_fix_stepsize_converge (minφ : IsMinOn (f + h) univ xm) :
     ∀ (k : ℕ), f (alg.x (k + 1)) + h (alg.x (k + 1)) - f xm - h xm ≤
     2 * alg.l / (k + 2) ^ 2 * ‖x0 - xm‖ ^ 2 := by
   intro k

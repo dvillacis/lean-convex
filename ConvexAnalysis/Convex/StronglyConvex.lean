@@ -13,13 +13,13 @@ import ConvexAnalysis.Function.Lsmooth
 -/
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E]
 
-variable {s : Set E} {f : E → ℝ} {m : ℝ} {xm xm': E} {f' : E → E} {mp : m > 0}
+variable {s : Set E} {f : E → ℝ} {m : ℝ} {xm xm' : E} {f' : E → E} {mp : m > 0}
 
 section Strongly_Convex
 
 open Set InnerProductSpace
 
-theorem Strongly_Convex_Bound (m : ℝ) (strongly_convex: StrongConvexOn s m f):
+theorem Strongly_Convex_Bound (m : ℝ) (strongly_convex : StrongConvexOn s m f) :
   ∀ ⦃x⦄, x ∈ s → ∀ ⦃y⦄, y ∈ s →
      ∀ ⦃a⦄, 0 < a → ∀ ⦃b⦄, 0 < b → a + b = 1 → f (a • x + b • y)
        ≤ a * f x + b * f y - m / 2 * a * b * ‖x - y‖ ^ 2 := by
@@ -44,14 +44,14 @@ theorem stronglyConvexOn_def (hs : Convex ℝ s)
   simp only [smul_eq_mul]
   linarith [hfun]
 
-theorem Strongly_Convex_Unique_Minima (hsc: StrongConvexOn s m f) {mp : m > 0}
-    (min: IsMinOn f s xm) (min' : IsMinOn f s xm') (hxm : xm ∈ s) (hxm' : xm' ∈ s): xm = xm' := by
+theorem Strongly_Convex_Unique_Minima (hsc : StrongConvexOn s m f) {mp : m > 0}
+    (min : IsMinOn f s xm) (min' : IsMinOn f s xm') (hxm : xm ∈ s) (hxm' : xm' ∈ s) : xm = xm' := by
   by_contra neq
   push Not at neq
   have eq : f xm = f xm' := by
     apply le_antisymm
-    . apply min hxm'
-    . apply min' hxm
+    · apply min hxm'
+    · apply min' hxm
   let x := (2 : ℝ)⁻¹ • xm + (2 : ℝ)⁻¹ • xm'
   have xeq : x = (2 : ℝ)⁻¹ • xm + (2 : ℝ)⁻¹ • xm' := by rfl
   rcases hsc with ⟨cr, sc⟩
@@ -71,8 +71,8 @@ theorem Strongly_Convex_Unique_Minima (hsc: StrongConvexOn s m f) {mp : m > 0}
     apply neq
   have nng : m / 2 * ‖xm - xm'‖ ^ 2 > 0 := by
     apply mul_pos
-    . linarith
-    . apply pow_pos; linarith
+    · linarith
+    · apply pow_pos; linarith
   apply absurd (min xs)
   simp
   calc
@@ -81,9 +81,8 @@ theorem Strongly_Convex_Unique_Minima (hsc: StrongConvexOn s m f) {mp : m > 0}
 
 
 /--
-  The sum of a convex function and a square of norm is strongly convex
+The sum of a convex function and a square of norm is strongly convex
 -/
-
 lemma strongconvex_of_convex_add_sq (f : E → ℝ) (x : E) (hfun : ConvexOn ℝ univ f) :
     StrongConvexOn univ (1 : ℝ) fun u ↦ f u + ‖u - x‖ ^ 2 / 2 := by
   rw [ConvexOn] at hfun
@@ -140,7 +139,7 @@ theorem Strong_Convex_iff_lower (hf : ∀ x ∈ s, HasGradientAt f (f' x) x) (hs
     StrongConvexOn s m f ↔ ∀ x ∈ s, ∀ y ∈ s, inner ℝ (f' x - f' y) (x - y) ≥ m * ‖x - y‖ ^ 2 :=
   ⟨fun hsc x xs y ys ↦ Strong_Convex_lower hsc hf x xs y ys, fun h ↦ Lower_Strong_Convex hf hs h⟩
 
-theorem Strong_Convex_second_lower (hsc: StrongConvexOn s m f)
+theorem Strong_Convex_second_lower (hsc : StrongConvexOn s m f)
     (hf : ∀ x ∈ s, HasGradientAt f (f' x) x) : ∀ x ∈ s, ∀ y ∈ s,
     f y ≥ f x + inner ℝ (f' x) (y - x) + m / 2 * ‖y - x‖ ^ 2 := by
   intro x xs y ys

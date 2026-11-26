@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2025  Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
+Copyright (c) 2025 Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
+Authors: Yifan Bai, Yunxi Duan, Zichen Wang, Chenyi Li
 -/
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.LinearAlgebra.Dual.Basis
@@ -39,6 +39,7 @@ if its epigraph over `s` is closed in the topological space `E × ℝ`.
 Purpose: provide a topological characterization of closedness for functions,
 linking the property of the function to the closedness of its epigraph.
 -/
+/-- The function `g` is closed on `s`: its epigraph `g.Epi s` is a closed subset of `E × ℝ`. -/
 def Function.IsClosed [TopologicalSpace E] (g : E → EReal) (s : Set E) : Prop :=
   _root_.IsClosed (g.Epi s)
 
@@ -50,6 +51,8 @@ Purpose: construct the “best” lower semicontinuous function lying below `g`,
 which is useful in analysis and optimization for regularizing or approximating
 functions by lower semicontinuous ones.
 -/
+/-- The lower semicontinuous hull of `g` on `s`: the pointwise supremum of all functions `f` that
+are lower semicontinuous on `s` and satisfy `f z ≤ g z` for all `z ∈ s`. -/
 noncomputable def Function.LowerSemicontinuousHull [TopologicalSpace E]
     (s : Set E) (g : E → EReal) : E → EReal :=
   ⨆ (f : E → EReal) (_ : LowerSemicontinuousOn f s) (_ : ∀ z ∈ s, f z ≤ g z ) , f
@@ -63,6 +66,8 @@ Purpose: provide a unified notion of closure for extended-real-valued functions,
 capturing both proper and degenerate cases, while ensuring that the resulting
 function behaves well topologically (lower semicontinuous) when `g` is proper.
 -/
+/-- The closure of `g` on `s`: the lower semicontinuous hull of `g` on `s` if `g` is proper on `s`;
+otherwise the constant `⊥` if `g x = ⊥` for some `x ∈ s`, and the constant `⊤` if not. -/
 noncomputable def Function.closure [TopologicalSpace E]
     (g : E → EReal) (s : Set E) : E → EReal :=
   letI : Decidable (ProperFunction s g) := Classical.propDecidable (ProperFunction s g)
@@ -100,7 +105,7 @@ lemma non_proper_closure_exist_bot [NormedAddCommGroup E] (f : E → EReal)
   rcases hnp with hl | hr
   · exact h1 hl
   simp at hr
-  have : ¬ ∃ x ∈ univ, f x = ⊥ := by push_neg; intro x _; rw [hr x]; simp
+  have : ¬ ∃ x ∈ univ, f x = ⊥ := by push Not; intro x _; rw [hr x]; simp
   split_ifs at hx
   simp at hx
 
@@ -155,7 +160,7 @@ theorem closure_le_self (s : Set E) (f : E → EReal) :
   by_cases hf : ∃ x ∈ s, f x = ⊥
   · simp [hf]
   simp [hf]
-  push_neg at hf
+  push Not at hf
   apply top_of_ne_bot_of_ne_proper hsf hf hx
 
 end le_self
@@ -176,7 +181,10 @@ lower semicontinuous hull of a function, since the hull is defined
 as the supremum of all such `h`.
 -/
 variable (s f) in
+/-- A minorant of `f` on `s` that is lower semicontinuous on `s`: a function `h : E → EReal`,
+lower semicontinuous on `s`, with `h z ≤ f z` for all `z ∈ s`. -/
 structure low_lowersemicontinous where
+  /-- The underlying function. -/
   h : E → EReal
   hs : LowerSemicontinuousOn h s
   hfz : ∀ z ∈ s, h z ≤ f z
@@ -282,7 +290,7 @@ theorem closure_eq_self' [NormedAddCommGroup E] [NormedSpace ℝ E]
   by_cases h1 : ∀ x ∈ univ, f x ≠ ⊥
   · simp [h1]
     exact Eq.symm (top_of_ne_bot_of_ne_proper hsf h1 trivial)
-  push_neg at h1
+  push Not at h1
   have h' : ∀ x, f x = ⊥ := by
     apply bot_of_exist_bot_of_convex_of_univ
     exact hc
@@ -434,7 +442,7 @@ function.
 -/
 variable (f) in
 theorem lowerSemicontinuousWithinAt_iff_lowerSemicontinuousAt_restrict {x} (h : x ∈ s) :
-    LowerSemicontinuousWithinAt f s x ↔ LowerSemicontinuousAt (s.restrict f) ⟨x, h⟩ := by
+    LowerSemicontinuousWithinAt f s x ↔ LowerSemicontinuousAt (s.domRestrict f) ⟨x, h⟩ := by
   simp [lowerSemicontinuousWithinAt_iff, lowerSemicontinuousAt_iff]
   refine forall₂_congr ?h
   intro a ha
@@ -446,7 +454,7 @@ is lower semicontinuous.
 Purpose: relate lower semicontinuity on a set to lower semicontinuity of the restricted function.
 -/
 theorem lowerSemicontinuousOn_iff_lowerSemicontinuousOn_restrict :
-    LowerSemicontinuousOn f s ↔ LowerSemicontinuous (s.restrict f) := by
+    LowerSemicontinuousOn f s ↔ LowerSemicontinuous (s.domRestrict f) := by
   rw [LowerSemicontinuousOn, LowerSemicontinuous]
   constructor
   · rintro h ⟨x, xs⟩
@@ -463,9 +471,9 @@ Purpose: show that lower semicontinuity on a set can be characterized by preimag
 theorem lowerSemicontinuousOn_iff_isOpen_preimage :
     LowerSemicontinuousOn f s ↔
     ∀ y, ∃ u, IsOpen u ∧ f ⁻¹' Ioi y ∩ s = u ∩ s := by
-  have : ∀ t, IsOpen (s.restrict f ⁻¹' t) ↔ ∃ u , IsOpen u ∧ f ⁻¹' t ∩ s = u ∩ s := by
+  have : ∀ t, IsOpen (s.domRestrict f ⁻¹' t) ↔ ∃ u , IsOpen u ∧ f ⁻¹' t ∩ s = u ∩ s := by
     intro t
-    rw [isOpen_induced_iff, show s.restrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
+    rw [isOpen_induced_iff, show s.domRestrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
     simp only [Subtype.preimage_coe_eq_preimage_coe_iff]
     constructor <;>
       · rintro ⟨u, ou, useq⟩
@@ -482,9 +490,9 @@ Purpose: show that lower semicontinuity on a set can be characterized by preimag
 theorem lowerSemicontinuousOn_iff_isClosed_preimage :
     LowerSemicontinuousOn f s ↔
     ∀ y, ∃ u, IsClosed u ∧ f ⁻¹' Iic y ∩ s = u ∩ s := by
-  have : ∀ t, IsClosed (s.restrict f ⁻¹' t) ↔ ∃ u , IsClosed u ∧ f ⁻¹' t ∩ s = u ∩ s := by
+  have : ∀ t, IsClosed (s.domRestrict f ⁻¹' t) ↔ ∃ u , IsClosed u ∧ f ⁻¹' t ∩ s = u ∩ s := by
     intro t
-    rw [isClosed_induced_iff, show s.restrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
+    rw [isClosed_induced_iff, show s.domRestrict f = f ∘ Subtype.val from rfl, Set.preimage_comp]
     simp only [Subtype.preimage_coe_eq_preimage_coe_iff]
     constructor <;>
       · rintro ⟨u, ou, useq⟩
@@ -549,7 +557,7 @@ theorem lowersemicontinuoushul_intersection_of_closed (s : Set E) (f : E → ERe
     {p : E × EReal | p.1 ∈ s ∧ LowerSemicontinuousHull s f p.1 ≤ p.2} =
     ⋂ i : low_lowersemicontinous s f, {p : E × EReal | p.1 ∈ s ∧ i.h p.1 ≤ p.2} := by
   simp [LowerSemicontinuousHull]
-  rw [Set.iInter_setOf]
+  rw [Set.iInter_ofPred]
   ext x
   simp
   constructor
@@ -800,7 +808,7 @@ theorem cl_finite_of_finite [TopologicalSpace E] {f : E → EReal} {s : Set E}
     (hfs : LowerSemicontinuousOn f s) (hf : ∀ x ∈ s, ⊥ < f x ∧ f x < ⊤) :
     ∀ x ∈ s, ⊥ < f.closure s x ∧ f.closure s x < ⊤ := by
   intro x hx
-  letI hsf : ProperFunction s f := instProperFunctionOfForallMemSetAndLtERealBotTop hf
+  let hsf : ProperFunction s f := instProperFunctionOfForallMemSetAndLtERealBotTop hf
   constructor
   · simpa [closure_eq_self_of_proper hfs _ hx] using (hf x hx).1
   calc _
@@ -896,8 +904,10 @@ the closure of the epigraph of the function (real version).
 -/
 variable [NormedAddCommGroup E] {s : Set E} {f : E → EReal}
 
+/-- The set `s × {⊤}` in `E × EReal`: the pairs `(x, ⊤)` with `x ∈ s`. -/
 def topline (s : Set E) := {(x, y) : E × EReal | x ∈ s ∧ y = ⊤}
 
+/-- The set `s × {⊥}` in `E × EReal`: the pairs `(x, ⊥)` with `x ∈ s`. -/
 def botline (s : Set E) := {(x, y) : E × EReal | x ∈ s ∧ y = ⊥}
 
 /-!
@@ -1056,7 +1066,8 @@ Lemma. If the union of two sets `s ∪ a` equals `t ∪ a`, and both `s` and `t`
 are disjoint from `a`, then `s` equals `t`.
 Purpose: a set-theoretic lemma to help prove the main theorem.
 -/
-lemma aux_set_eq_of_cup {α : Type*} {s t a : Set α} (h : s ∪ a = t ∪ a) (hs : s ∩ a = ∅) (ht : t ∩ a = ∅) :
+lemma aux_set_eq_of_cup {α : Type*} {s t a : Set α} (h : s ∪ a = t ∪ a) (hs : s ∩ a = ∅)
+    (ht : t ∩ a = ∅) :
     s = t := by
   simp [← disjoint_iff_inter_eq_empty, Set.union_eq_union_iff_right] at *
   have h1:= Disjoint.subset_left_of_subset_union h.1 hs
@@ -1260,7 +1271,7 @@ theorem f_mono_closure_mono
   simp [Function.closure, hsf]
   by_cases hf : ∃ x ∈ s, f₁ x = ⊥
   · simp [hf]
-  simp [hf]; push_neg at hf
+  simp [hf]; push Not at hf
   have xsf1x : ∀ x ∈ s, f₁ x = ⊤ := fun x a ↦ top_of_ne_bot_of_ne_proper hsf hf a
   have xsf2x : ∀ x ∈ s, f₂ x = ⊤ := by
     intro z hz; specialize mono z hz

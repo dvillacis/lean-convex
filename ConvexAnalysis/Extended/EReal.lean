@@ -1,6 +1,7 @@
 /-
 Copyright (c) 2025 Zichen Wang, Chenyi Li. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Zichen Wang, Chenyi Li
 -/
 import Mathlib.Data.EReal.Basic
 import Mathlib.Topology.Instances.EReal.Lemmas
@@ -43,7 +44,7 @@ Lemma. For any positive real a, multiplying by a preserves finiteness: a * b < +
 lemma mul_lt_top_iff_lt_top {a : ℝ} (ha : a > 0) {b : EReal} :
     a * b < ⊤ ↔ b < ⊤ := by
   constructor
-  · intro h; by_contra ht; push_neg at ht; simp at ht
+  · intro h; by_contra ht; push Not at ht; simp at ht
     rw [ht, coe_mul_top_of_pos ha] at h; simp at h
   intro h
   by_cases hb : b = ⊥
@@ -92,7 +93,7 @@ Lemma. Distributivity over subtraction: (a − b) • x = a • x − b • x (f
 lemma EReal.sub_smul (a b : ℝ) {x : EReal} (hx : x > ⊥) (hx1 : x < ⊤) :
     (a - b) • x = a • x - b • x := by
   rw [sub_eq_add_neg, EReal.add_smul, sub_eq_add_neg]
-  · simp only [real_smul_ereal, smul_eq_mul, coe_neg, neg_mul]
+  · simp only [smul_eq_mul, coe_neg, neg_mul]
   · exact hx
   exact hx1
 
@@ -213,7 +214,7 @@ lemma EReal.smul_gt_bot_of_ge_zero {a : ℝ} {b : EReal}
   · rw [hb2]
     by_cases ha0 : a = 0
     · simp [ha0]
-    push_neg at ha0
+    push Not at ha0
     have hapos : a > 0 := lt_of_le_of_ne ha (id (Ne.symm ha0))
     have : (⊤:EReal) > a := coe_lt_top a
     by_cases ha1 : a > 0
@@ -346,7 +347,7 @@ lemma EReal.lt_top_of_add_le {a b d : EReal}
   lift d to ℝ using ⟨hd1, hd2⟩
   have : Real.toEReal d < ⊤ := by simp
   by_contra ha
-  push_neg at ha
+  push Not at ha
   simp at ha
   simp [ha] at h
 
@@ -403,7 +404,7 @@ lemma EReal.sub_lt_bot {a b : EReal}
   by_cases hb2 : b = ⊥
   · rw [hb2, EReal.coe_sub_bot a]
     simp
-  · push_neg at hb2
+  · push Not at hb2
     lift b to ℝ using ⟨hb1, hb2⟩
     rw [← EReal.coe_sub]
     apply Ne.bot_lt
@@ -504,6 +505,7 @@ lemma EReal.mul_pos_real_le {a b : EReal} {c : ℝ} (hab : a ≤ b) (hc : c > 0)
 /-
 Lemma. Positive real factors pull out of finite sums in extended reals: a * (∑ f i) = ∑ a * f i.
 -/
+set_option linter.unusedDecidableInType false in
 lemma EReal.finset_mul_sum {ι : Type*} [DecidableEq ι] :
     (τ : Finset ι) → (f : ι → EReal) → (a : ℝ) → (hpos : a > 0) →
     a * ∑ i ∈ τ, f i = ∑ i ∈ τ, a * f i := by
@@ -871,7 +873,8 @@ lemma Range.eq_if' {α : Type u} {i : Sort u_1} {f g : i → α} (eq : f = g) :
 /-
 Lemma. A property of (bounded) indexed suprema in extended reals.
 -/
-lemma biSup_coe_const_add' {α : Type*} {a : EReal} {f : α → EReal} {s : Set α} (p : a < ⊤) (q : a > ⊥) :
+lemma biSup_coe_const_add' {α : Type*} {a : EReal} {f : α → EReal} {s : Set α} (p : a < ⊤)
+    (q : a > ⊥) :
     a + (⨆ m ∈ s, f m) =  (⨆ m ∈ s, a + f m) := by
   lift a to ℝ using ⟨LT.lt.ne_top p, LT.lt.ne_bot q⟩
   dsimp [iSup]
@@ -905,7 +908,7 @@ lemma biSup_const_add {α : Type*} {a : EReal} {f : α → EReal} {s : Set α}
     have : ⊥ < ⨆ m ∈ s, f m := by
       by_contra nh
       simp at nh
-      push_neg at em
+      push Not at em
       rcases em with ⟨e, ee⟩
       have n2 := nh e ee
       have n1 := bot_lt_iff_ne_bot.mp ( pf e ee)
@@ -1101,6 +1104,7 @@ lemma bot_of_exist_bot_of_convex_of_univ {E} [AddCommGroup E] [Module ℝ E] {f 
 Lemma. Jensen-type inequality: for a convex f and
   barycentric weights on points in s, f(∑ wᵢ • pᵢ) ≤ ∑ wᵢ • f(pᵢ).
 -/
+set_option linter.unusedDecidableInType false in
 theorem ConvexOn.map_sum_le' {E s} {ι : Type*} [AddCommGroup E] [Module ℝ E] [DecidableEq ι]
     {f : E → EReal} {p : ι → E} (hf : ConvexOn ℝ s f) :
     (t : Finset ι) → (w : ι → ℝ) → (∀ i ∈ t, 0 ≤ w i) → (∑ i ∈ t, w i = 1) →
@@ -1115,7 +1119,7 @@ theorem ConvexOn.map_sum_le' {E s} {ι : Type*} [AddCommGroup E] [Module ℝ E] 
     rw [ha] at h₁; simp at h₁
     have hw : ∀ i ∈ t, w i = 0 := by
       intro i hi
-      by_contra h1; push_neg at h1
+      by_contra h1; push Not at h1
       obtain h2 := hw i hi
       linarith [Finset.sum_pos' hw ⟨i, hi, by positivity⟩]
     have p1 : ∑ i ∈ t, w i • p i = 0 := by
@@ -1130,7 +1134,7 @@ theorem ConvexOn.map_sum_le' {E s} {ι : Type*} [AddCommGroup E] [Module ℝ E] 
   have hab0 : w a ≥ 0 := h₀ a (Finset.mem_insert_self a t)
   have hab1 : 1 - w a > 0 := by
     simp [hat] at h₁
-    by_contra h2; push_neg at h2 ha
+    by_contra h2; push Not at h2 ha
     have : w a > 1 := lt_of_le_of_ne (by linarith) (id (Ne.symm ha))
     have : ∑ i ∈ t, w i ≥ 0 := by
       apply Finset.sum_nonneg hw

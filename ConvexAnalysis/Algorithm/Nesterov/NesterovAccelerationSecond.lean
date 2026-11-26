@@ -10,7 +10,8 @@ import ConvexAnalysis.Function.Proximal
 
 ## Main results
 
-  This file mainly concentrates on the second version of Nesterov algorithm for composite optimization problems.
+  This file mainly concentrates on the second version of Nesterov algorithm for
+  composite optimization problems.
 
   We prove the O(1 / k ^ 2) rate for this algorithm.
 
@@ -26,8 +27,27 @@ variable {f h : E → ℝ} {f' : E → E}
 
 open Set Real
 
+/-- The second version of Nesterov's accelerated proximal gradient method for `f + h`, started
+at `x0`: `z k = (1 - γ k) • x (k - 1) + γ k • y (k - 1)`, `y k` is a proximal point of
+`(t k / γ k) • h` at `y (k - 1) - (t k / γ k) • f' (z k)`, and
+`x k = (1 - γ k) • x (k - 1) + γ k • y k`. Here `f` and `h` are convex and the gradient `f'`
+of `f` is `l`-Lipschitz. -/
 class Nesterov_second (f h : E → ℝ) (f' : E → E) (x0 : E) where
-  (l : NNReal) (hl : l > (0 : ℝ)) (x y : ℕ → E) (z : ℕ+ → E) (t γ : ℕ → ℝ)
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (l : NNReal)
+  (hl : l > (0 : ℝ))
+  /-- The sequence of iterates, `x k = (1 - γ k) • x (k - 1) + γ k • y k`. -/
+  (x : ℕ → E)
+  /-- The sequence of proximal points: `y k` is a proximal point of `(t k / γ k) • h` at
+  `y (k - 1) - (t k / γ k) • f' (z k)`. -/
+  (y : ℕ → E)
+  /-- The points `z k = (1 - γ k) • x (k - 1) + γ k • y (k - 1)` at which the gradient of `f`
+  is evaluated. -/
+  (z : ℕ+ → E)
+  /-- The sequence of step sizes. -/
+  (t : ℕ → ℝ)
+  /-- The sequence of averaging parameters. -/
+  (γ : ℕ → ℝ)
   (h₁ : ∀ x : E, HasGradientAt f (f' x) x) (convf: ConvexOn ℝ Set.univ f)
   (h₂ : LipschitzWith l f') (convh : ConvexOn ℝ univ h)
   (oriy : y 0 = x 0) (oriγ : γ 1 = 1) (initial : x0 = x 0)
@@ -41,7 +61,7 @@ variable {alg : Nesterov_second f h f' x0}
 
 variable {xm : E}
 
-theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
+theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm) :
     ∀ (k : ℕ), f (alg.x (k + 1)) + h (alg.x (k + 1)) - f xm - h xm ≤
       (alg.γ (k + 1)) ^ 2 / (2 * alg.t (k + 1)) * ‖x0 - xm‖ ^ 2 := by
   let φ := fun z : E ↦ f z + h z
@@ -50,13 +70,14 @@ theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
       ∈ (SubderivAt (alg.t k • h) (alg.y k)) := by
     intro k; obtain h1 := alg.update2 k
     rw [prox_iff_subderiv] at h1
-    have upd2 := @SubderivAt.pos_smul _ _ _ ((alg.t k / alg.γ k) • h) (alg.y k) (alg.γ k) (alg.γbound k).1
+    have upd2 := @SubderivAt.pos_smul _ _ _ ((alg.t k / alg.γ k) • h) (alg.y k) (alg.γ k)
+      (alg.γbound k).1
     rw [← smul_assoc, smul_eq_mul, mul_div, mul_comm, ← mul_div, div_self, mul_one] at upd2
     rw [upd2]
     use (alg.y (↑k - 1) - (alg.t ↑k / alg.γ ↑k) • f' (alg.z k) - alg.y ↑k)
     constructor
-    . exact h1
-    . simp
+    · exact h1
+    · simp
       rw [sub_right_comm, smul_sub, ← smul_assoc, smul_eq_mul]
       rw [mul_div, mul_comm, ← mul_div, div_self, mul_one]
       linarith [(alg.γbound k).1]
@@ -72,23 +93,24 @@ theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
     specialize h1 k
     rw [← mem_SubderivAt, HasSubgradientAt] at h1
     specialize h1 w; simp at h1; linarith [h1]
-  have cvxineq : ∀ k : ℕ+, h (alg.x k) ≤ (1 - alg.γ k) * h (alg.x (k - 1)) + alg.γ k * h (alg.y k) := by
+  have cvxineq : ∀ k : ℕ+, h (alg.x k) ≤
+      (1 - alg.γ k) * h (alg.x (k - 1)) + alg.γ k * h (alg.y k) := by
     intro k; obtain convh := alg.convh
     rw [convexOn_iff_forall_pos] at convh;
     rcases convh with ⟨_, fall⟩
     have mem1 : (alg.x (k - 1)) ∈ univ := by simp
     have mem2 : alg.y k ∈ univ := by simp
     by_cases eq1 : alg.γ k = 1
-    . simp [eq1]
+    · simp [eq1]
       obtain update3 := alg.update3 k
       simp [eq1] at update3
       rw [update3]
-    . push Not at eq1
+    · push Not at eq1
       have pos : 1 - alg.γ k > 0 := by
         apply lt_iff_le_and_ne.mpr
         constructor
-        . linarith [(alg.γbound k).2]
-        . contrapose! eq1
+        · linarith [(alg.γbound k).2]
+        · contrapose! eq1
           linarith [eq1]
       specialize fall mem1 mem2 pos ((alg.γbound k).1) (by linarith)
       rw [← (alg.update3 k)] at fall
@@ -129,9 +151,9 @@ theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
     apply le_trans (hieq4 k)
     simp only [add_le_add_iff_left]
     by_cases nm0 : ‖alg.x ↑k - alg.z k‖ ^ 2 = 0
-    . rw [nm0]
+    · rw [nm0]
       simp
-    . push Not at nm0
+    · push Not at nm0
       have ax : ‖alg.x ↑k - alg.z k‖ ^ 2 > 0 := by
         apply lt_of_le_of_ne
         simp
@@ -145,7 +167,8 @@ theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
       rw [← one_div, ← div_mul, mul_comm]
       linarith [(alg.tbound k).2]
   have hieq6 : ∀ k : ℕ+, f (alg.x k) ≤ f (alg.z k) + ⟪f' (alg.z k), (1 - alg.γ k) • alg.x (k - 1)
-      + alg.γ k • alg.y k - alg.z k⟫ + ((alg.γ k) ^ 2 / (2 * alg.t k)) * ‖alg.y k - alg.y (k - 1)‖ ^ 2 := by
+      + alg.γ k • alg.y k - alg.z k⟫
+      + ((alg.γ k) ^ 2 / (2 * alg.t k)) * ‖alg.y k - alg.y (k - 1)‖ ^ 2 := by
     intro k
     have ax1 : alg.x ↑k - alg.z k = alg.γ k • (alg.y k - alg.y (k - 1)) := by
       rw [(alg.update1 k), (alg.update3 k)]
@@ -164,7 +187,8 @@ theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
       + ((alg.γ k) ^ 2 / (2 * alg.t k)) * ‖alg.y k - alg.y (k - 1)‖ ^ 2 := by
     intro k
     calc
-      f (alg.x k) ≤ f (alg.z k) + ⟪f' (alg.z k), (1 - alg.γ k) • alg.x (k - 1) + alg.γ k • alg.y k - alg.z k⟫
+      f (alg.x k) ≤ f (alg.z k) + ⟪f' (alg.z k), (1 - alg.γ k) • alg.x (k - 1)
+          + alg.γ k • alg.y k - alg.z k⟫
           + ((alg.γ k) ^ 2 / (2 * alg.t k)) * ‖alg.y k - alg.y (k - 1)‖ ^ 2 := by
         apply hieq6
       _ = (1 - alg.γ k) * (f (alg.z k) + ⟪f' (alg.z k), alg.x (k - 1) - alg.z k⟫) + alg.γ k
@@ -179,17 +203,18 @@ theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
         nth_rw 1 [inner_add_right]
         rw [inner_smul_right, inner_smul_right, mul_add, mul_add]
         ring
-      _ ≤ (1 - alg.γ k) * (f (alg.x (k - 1))) + alg.γ k * (f (alg.z k) + ⟪f' (alg.z k), alg.y k - alg.z k⟫)
+      _ ≤ (1 - alg.γ k) * (f (alg.x (k - 1)))
+          + alg.γ k * (f (alg.z k) + ⟪f' (alg.z k), alg.y k - alg.z k⟫)
           + ((alg.γ k) ^ 2 / (2 * alg.t k)) * ‖alg.y k - alg.y (k - 1)‖ ^ 2 := by
         simp only [add_le_add_iff_right]
         by_cases eq1 : alg.γ k = 1
-        . simp [eq1]
-        . push Not at eq1
+        · simp [eq1]
+        · push Not at eq1
           have pos : 1 - alg.γ k > 0 := by
             apply lt_iff_le_and_ne.mpr
             constructor
-            . linarith [(alg.γbound k).2]
-            . contrapose! eq1
+            · linarith [(alg.γbound k).2]
+            · contrapose! eq1
               linarith [eq1]
           apply (mul_le_mul_iff_right₀ pos).mpr
           apply Convex_first_order_condition' (alg.h₁ (alg.z k)) alg.convf
@@ -334,7 +359,8 @@ theorem Nesterov_second_convergence (minφ : IsMinOn (f + h) Set.univ xm):
   calc
     _ = alg.t (k + 1) / alg.γ (k + 1) ^ 2 * (φ (alg.x (k + 1)) - φ xm) := by
       rw [sub_sub, ← φdef, ← φdef]
-    _ ≤ alg.t (k + 1) / alg.γ (k + 1) ^ 2 * (φ (alg.x (k + 1)) - φ xm) + 1 / 2 * ‖alg.y (k + 1) - xm‖ ^ 2 := by
+    _ ≤ alg.t (k + 1) / alg.γ (k + 1) ^ 2 * (φ (alg.x (k + 1)) - φ xm)
+        + 1 / 2 * ‖alg.y (k + 1) - xm‖ ^ 2 := by
       simp
     _ ≤ alg.t 1 / alg.γ 1 ^ 2 * (φ (alg.x 1) - φ xm) + 1 / 2 * ‖alg.y 1 - xm‖ ^ 2 := by
       exact bound k
@@ -366,8 +392,25 @@ variable {f h : E → ℝ} {f' : E → E} {x0 : E}
 
 open Set Real PNat
 
-class Nesterov_second_fix_stepsize (f h: E → ℝ) (f' : E → E) (x0 : E) where
-  (l : NNReal) (hl : l > (0 : ℝ)) (x y : ℕ → E) (z : ℕ+ → E) (t γ : ℕ → ℝ)
+/-- The second version of Nesterov's accelerated proximal gradient method for `f + h` with the
+fixed step size `t n = 1 / l` and the parameters `γ 0 = 1 / 2`, `γ n = 2 / (1 + n)` for
+`n ≠ 0`, where `l` is the Lipschitz constant of the gradient `f'` of `f`. -/
+class Nesterov_second_fix_stepsize (f h : E → ℝ) (f' : E → E) (x0 : E) where
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (l : NNReal)
+  (hl : l > (0 : ℝ))
+  /-- The sequence of iterates, `x k = (1 - γ k) • x (k - 1) + γ k • y k`. -/
+  (x : ℕ → E)
+  /-- The sequence of proximal points: `y k` is a proximal point of `(t k / γ k) • h` at
+  `y (k - 1) - (t k / γ k) • f' (z k)`. -/
+  (y : ℕ → E)
+  /-- The points `z k = (1 - γ k) • x (k - 1) + γ k • y (k - 1)` at which the gradient of `f`
+  is evaluated. -/
+  (z : ℕ+ → E)
+  /-- The sequence of step sizes. -/
+  (t : ℕ → ℝ)
+  /-- The sequence of averaging parameters. -/
+  (γ : ℕ → ℝ)
   (h₁ : ∀ x : E, HasGradientAt f (f' x) x) (convf: ConvexOn ℝ Set.univ f)
   (h₂ : LipschitzWith l f') (convh : ConvexOn ℝ univ h)
   (oriy : y 0 = x 0) (initial : x0 = x 0)
@@ -424,7 +467,7 @@ variable {alg : Nesterov_second_fix_stepsize f h f' x0}
 
 variable {xm : E}
 
-theorem Nesterov_second_fix_stepsize_converge (minφ : IsMinOn (f + h) Set.univ xm):
+theorem Nesterov_second_fix_stepsize_converge (minφ : IsMinOn (f + h) Set.univ xm) :
     ∀ (k : ℕ), f (alg.x (k + 1)) + h (alg.x (k + 1)) - f xm - h xm ≤
     2 * alg.l / (k + 2) ^ 2 * ‖x0 - xm‖ ^ 2 := by
   intro k

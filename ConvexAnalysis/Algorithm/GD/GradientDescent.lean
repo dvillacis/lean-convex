@@ -62,7 +62,7 @@ lemma mono_sum_prop_primal' (mono : ∀ k : ℕ, f (g (k + 1)) ≤ f (g k)):
 
 -- the sumation property of the gradient method
 omit [NormedAddCommGroup E] in
-lemma mono_sum_prop (mono : ∀ k: ℕ, f (g (k + 1)) ≤ f (g k)):
+lemma mono_sum_prop (mono : ∀ k : ℕ, f (g (k + 1)) ≤ f (g k)):
     ∀ n : ℕ ,  (f (g (n + 1)) -  f xm) ≤ (Finset.range (n + 1)).sum
     (fun (k : ℕ) ↦ f (g (k + 1)) - f xm) / (n + 1) := by
   intro n
@@ -83,14 +83,30 @@ noncomputable section gradient_descent
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
+/-- Gradient descent for `f` with gradient `f'`, started at `x0`: the iterates satisfy
+`x (k + 1) = x k - a k • f' (x k)` with step sizes `a k > 0`, and `f'` is `l`-Lipschitz
+with `l > 0`. -/
 class GradientDescent (f : E → ℝ) (f' : E → E) (x0 : E) where
-  (x : ℕ → E) (a : ℕ → ℝ) (l : NNReal)
+  /-- The sequence of iterates. -/
+  (x : ℕ → E)
+  /-- The sequence of step sizes. -/
+  (a : ℕ → ℝ)
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (l : NNReal)
   (diff : ∀ x₁, HasGradientAt f (f' x₁) x₁) (smooth : LipschitzWith l f')
   (update : ∀ k : ℕ, x (k + 1) = x k - a k • f' (x k))
   (hl : l > 0) (step₁ : ∀ k, a k > 0) (initial : x 0 = x0)
 
+/-- Gradient descent with a fixed step size for `f` with gradient `f'`, started at `x0`:
+the iterates satisfy `x (k + 1) = x k - a • f' (x k)` with `a > 0`, and `f'` is `l`-Lipschitz
+with `l > 0`. -/
 class Gradient_Descent_fix_stepsize (f : E → ℝ) (f' : E → E) (x0 : E) where
-  (x : ℕ → E) (a : ℝ) (l : NNReal)
+  /-- The sequence of iterates. -/
+  (x : ℕ → E)
+  /-- The fixed step size. -/
+  (a : ℝ)
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (l : NNReal)
   (diff : ∀ x₁, HasGradientAt f (f' x₁) x₁) (smooth : LipschitzWith l f')
   (update : ∀ k : ℕ, x (k + 1) = x k - a • f' (x k))
   (hl : l > (0 : ℝ)) (step₁ : a > 0) (initial : x 0 = x0)
@@ -111,7 +127,7 @@ open InnerProductSpace Set
 
 variable {f : E → ℝ} {f' : E → E}
 
-variable {l : NNReal} {xm x₀ : E}{a : ℝ}
+variable {l : NNReal} {xm x₀ : E} {a : ℝ}
 
 variable {alg : Gradient_Descent_fix_stepsize f f' x₀}
 
@@ -182,7 +198,8 @@ lemma point_descent_for_convex (hfun : ConvexOn ℝ Set.univ f) (step₂ : alg.a
               exact convex_lipschitz alg.diff this step₂ alg.step₁ alg.smooth x
             _   ≤ f xm + inner ℝ (f' x) (x - xm) - alg.a / 2 * ‖f' x‖ ^ 2 := by
               linarith [convex_function alg.diff hfun x xm]
-            _   = f xm + 1 / ((2 : ℝ) * alg.a) * (‖x - xm‖ ^ 2 - ‖x - alg.a • (f' x) - xm‖ ^ 2) := by
+            _   = f xm + 1 / ((2 : ℝ) * alg.a) *
+                (‖x - xm‖ ^ 2 - ‖x - alg.a • (f' x) - xm‖ ^ 2) := by
               rw [add_sub_assoc, t2]
   specialize descent (alg.x k)
   rw [alg.update k]
@@ -190,7 +207,7 @@ lemma point_descent_for_convex (hfun : ConvexOn ℝ Set.univ f) (step₂ : alg.a
 
 -- the O(1/t) descent property of the gradient method
 
-lemma gradient_method (hfun: ConvexOn ℝ Set.univ f) (step₂ : alg.a ≤ 1 / alg.l) :
+lemma gradient_method (hfun : ConvexOn ℝ Set.univ f) (step₂ : alg.a ≤ 1 / alg.l) :
     ∀ k : ℕ, f (alg.x (k + 1)) - f xm ≤ 1 / (2 * (k + 1) * alg.a) * ‖x₀ - xm‖ ^ 2 := by
   intro k
   have step1₂ : alg.l ≤ 1 / alg.a := by

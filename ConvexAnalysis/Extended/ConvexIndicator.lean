@@ -1,5 +1,20 @@
+/-
+Copyright (c) 2026 The Reaslib authors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Reaslib authors
+-/
 import ConvexAnalysis.Extended.EReal
 import ConvexAnalysis.Extended.ProperFunction
+
+/-!
+# Indicator function of a set
+
+This file defines the indicator function `Set.convex_indicator` of a set `s`, equal to `0` on `s`
+and `⊤` outside `s`. It is proper (`ConvexIndicator_is_proper`,
+`ConvexIndicator_is_proper_on_univ`), convex when `s` is convex (`indicator_is_convex`,
+`indicator_is_convex_on_univ`), and lower semicontinuous when `s` is closed
+(`lowerSemicontinuous_convex_indicator_of_closed`).
+-/
 
 
 open Filter BigOperators Set Topology Function Module EReal
@@ -12,6 +27,8 @@ section convex_indicator_def
   The indicator function of a convex set --Set.convex_indicator
 -/
 
+/-- The indicator function of the set `s` in the sense of convex analysis: `0` on `s` and `⊤`
+outside `s`. -/
 noncomputable def Set.convex_indicator (s : Set α) (x : α) : EReal :=
   haveI := Classical.decPred (· ∈ s)
   if x ∈ s then 0 else ⊤

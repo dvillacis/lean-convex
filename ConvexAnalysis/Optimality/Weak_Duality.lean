@@ -1,10 +1,22 @@
 /-
 Copyright (c) 2025 Chenyi Li, Zaiwen Wen. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Chenyi Li, Zaiwen Wen
+Authors: Chenyi Li, Zaiwen Wen
 -/
 import ConvexAnalysis.Optimality.Constrained_Problem
 import ConvexAnalysis.Convex.ConvexFunction
+
+/-!
+# Lagrangian duality for constrained optimization problems
+
+This file defines the dual objective `dual_objective`, the dual problem `dual_problem`, the
+optimal values `inf_value` and `sup_value`, and KKT points `KKT_point` of a
+`Constrained_OptimizationProblem`.
+
+The main results are weak duality (`weak_duality`, `weak_duality'`) and, for a convex problem
+without equality constraints, that the multipliers of a KKT point at a global minimizer solve the
+dual problem (`optimal_multipliers_solution_dual_problem`).
+-/
 
 section Duality
 
@@ -17,10 +29,16 @@ namespace Constrained_OptimizationProblem
 variable {E : Type _} {τ σ : Finset ℕ}
 variable {p : Constrained_OptimizationProblem E τ σ}
 
+/-- The Lagrange dual function `(λ₁, λ₂) ↦ inf_{x ∈ domain} L(x, λ₁, λ₂)`, with values in
+`EReal`, where `L` is `Lagrange_function`. -/
 def dual_objective : (τ → ℝ) → (σ → ℝ) → EReal :=
   fun (lambda1 : τ → ℝ) (lambda2 : σ → ℝ) ↦
     ⨅ x ∈ p.domain, (p.Lagrange_function x lambda1 lambda2).toEReal
 
+/-- The dual problem, as a `Constrained_OptimizationProblem` in the multipliers `(λ₁, λ₂)`: its
+domain is the set where the dual objective is not `⊥`, its objective is the (real part of the)
+dual objective, it has no equality constraints, and its inequality constraints are `λ₂ i ≥ 0`
+for `i ∈ σ`. -/
 def dual_problem : Constrained_OptimizationProblem ((τ → ℝ) × (σ → ℝ)) ∅ σ where
   domain := {x | p.dual_objective x.1 x.2 ≠ ⊥}
   equality_constraints := fun _ _ ↦ 0
@@ -28,12 +46,17 @@ def dual_problem : Constrained_OptimizationProblem ((τ → ℝ) × (σ → ℝ)
   objective := fun x ↦ (p.dual_objective x.1 x.2).toReal
   eq_ine_not_intersect := by simp
 
+/-- The infimum in `EReal` of the objective over the feasible set. -/
 def inf_value : EReal := sInf (Real.toEReal '' (p.objective '' (p.FeasSet)))
 
+/-- The supremum in `EReal` of the objective over the feasible set. -/
 def sup_value : EReal := sSup (Real.toEReal '' (p.objective '' (p.FeasSet)))
 
 variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 
+/-- `x` is a KKT point with multipliers `lambda` and `mu`: the gradient in `x` of the Lagrangian
+vanishes at `x`, `x` is feasible, `mu ≥ 0`, and complementary slackness `mu i * cᵢ x = 0` holds
+for all `i : σ`. -/
 def KKT_point (self : Constrained_OptimizationProblem E τ σ)
     (x : E) (lambda : τ → ℝ) (mu : σ → ℝ) : Prop :=
   (gradient (fun m ↦ (self.Lagrange_function m lambda mu)) x = 0)
@@ -55,7 +78,8 @@ lemma empty_domain_inf_value_top {p : Constrained_OptimizationProblem E τ σ} (
   unfold FeasSet FeasPoint
   simp [hp]
 
-lemma empty_FeasSet_inf_value_top {p : Constrained_OptimizationProblem E τ σ} (hp : (p.FeasSet) = ∅) :
+lemma empty_FeasSet_inf_value_top {p : Constrained_OptimizationProblem E τ σ}
+    (hp : (p.FeasSet) = ∅) :
     p.inf_value = ⊤ := by
   unfold inf_value; simp [hp]
 
@@ -65,7 +89,8 @@ lemma objective_le_sup {p : Constrained_OptimizationProblem E τ σ} (x : E) (hx
   apply le_sSup
   simp; use x
 
-lemma dual_objective_le_top_nonempty {p : Constrained_OptimizationProblem E τ σ} (hp : (p.domain).Nonempty) :
+lemma dual_objective_le_top_nonempty {p : Constrained_OptimizationProblem E τ σ}
+    (hp : (p.domain).Nonempty) :
     ∀ lambda1 lambda2, p.dual_objective lambda1 lambda2 < ⊤ := by
   intro lambda1 lambda2
   unfold dual_objective
@@ -73,7 +98,8 @@ lemma dual_objective_le_top_nonempty {p : Constrained_OptimizationProblem E τ �
   apply iInf_lt_top.mpr
   use x; simp; apply Classical.choose_spec hp
 
-lemma dual_objective_eq_top_empty {p : Constrained_OptimizationProblem E τ σ} (hp : (p.domain) = ∅) :
+lemma dual_objective_eq_top_empty {p : Constrained_OptimizationProblem E τ σ}
+    (hp : (p.domain) = ∅) :
     ∀ lambda1 lambda2, p.dual_objective lambda1 lambda2 = ⊤ := by
   intro lambda1 lambda2; unfold dual_objective
   simp; intro x
@@ -128,7 +154,7 @@ lemma objective_maximum_global_maximum {p : Constrained_OptimizationProblem E τ
   simpa
 
 theorem weak_duality {p : Constrained_OptimizationProblem E τ σ}
-    (lambda1 : τ → ℝ) {lambda2 : σ → ℝ} (mpos : lambda2 ≥ 0):
+    (lambda1 : τ → ℝ) {lambda2 : σ → ℝ} (mpos : lambda2 ≥ 0) :
     p.dual_objective lambda1 lambda2 ≤ p.inf_value := by
   unfold inf_value dual_objective
   apply le_sInf; simp
@@ -185,10 +211,11 @@ variable {E : Type _} {τ σ : Finset ℕ}
 variable [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable {p : Constrained_OptimizationProblem E τ σ}
 
+set_option linter.unusedDecidableInType false in
 lemma ConcaveOn.sum {α 𝕜 : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [IsOrderedRing 𝕜]
     [AddCommMonoid α] [SMul 𝕜 α]
     {ι : Type*} [DecidableEq ι] {s : Finset ι} {t : s → α → 𝕜} {d : Set α}
-    (h : ∀ i : s, ConcaveOn 𝕜 d (t i)) (hd : Convex 𝕜 d):
+    (h : ∀ i : s, ConcaveOn 𝕜 d (t i)) (hd : Convex 𝕜 d) :
     ConcaveOn 𝕜 d (fun x => ∑ i : s, t i x) := by
   constructor
   · exact hd
@@ -331,7 +358,8 @@ theorem optimal_multipliers_solution_dual_problem {p : Constrained_OptimizationP
   · obtain h1 := KKT_multipliers_inf_value h hτ x hf hi conti lambda1 lambda2 hg hKKT
     obtain h2 := weak_duality' (p := p)
     have : (p.dual_problem).objective (lambda1, lambda2) ≤ (p.dual_problem).sup_value := by
-      apply objective_le_sup _ (KKT_multipliers_dual_feasible h hτ x hf hi conti lambda1 lambda2 hg hKKT)
+      apply objective_le_sup _
+        (KKT_multipliers_dual_feasible h hτ x hf hi conti lambda1 lambda2 hg hKKT)
     rw [← h1] at h2
     symm; apply antisymm h2 this
   exact KKT_multipliers_dual_feasible h hτ x hf hi conti lambda1 lambda2 hg hKKT

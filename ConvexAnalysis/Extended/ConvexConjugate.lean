@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 The Reaslib authors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: The Reaslib authors
+-/
 import Mathlib.Order.LiminfLimsup
 import Mathlib.Analysis.InnerProductSpace.ProdL2
 import Mathlib.Topology.Defs.Filter
@@ -8,12 +13,23 @@ import Mathlib.Data.Set.Card
 import Mathlib.Analysis.Convex.Intrinsic
 import Mathlib.Analysis.LocallyConvex.Separation
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
-import Mathlib.Topology.Algebra.Module.LinearMap
+import Mathlib.Topology.Algebra.Module.ContinuousLinearMap.Basic
 import Mathlib.Analysis.InnerProductSpace.Adjoint
 import ConvexAnalysis.Extended.AffineMinorant
 import ConvexAnalysis.Extended.AffineMinorantExistence
 import ConvexAnalysis.Extended.AffineMinorantHilbert
 import ConvexAnalysis.Extended.EReal
+
+/-!
+# Convex conjugate of extended real-valued functions
+
+This file defines the convex conjugate `convex_conjugate s f` of a function `f : E → EReal` over a
+set `s`, given by `y ↦ ⨆ x ∈ s, ⟪x, y⟫ - f x`. The main results are the Fenchel inequality
+`fenchel_inequality`, the convexity and lower semicontinuity of the conjugate
+(`convex_conjugate_convex`, `lowerSemicontinuous_convex_conjugate`), the identification of the
+biconjugate with the closure (`bi_convex_conjugate_eq_closure`, `bi_convex_conjugate_eq_self`),
+and the permutation `convex_conjugate_equiv` of `ProperClosedConvexFunction E`.
+-/
 
 open Filter BigOperators Set Topology Inner Function Module EReal
 open scoped Pointwise
@@ -40,6 +56,7 @@ noncomputable section convex_conjugate_def
 
 variable (s : Set E) (f : E → EReal)
 
+/-- The convex conjugate of `f` over `s`: the function `y ↦ ⨆ x ∈ s, ⟪x, y⟫ - f x`. -/
 noncomputable def convex_conjugate : E → EReal :=
   fun y => ⨆ x ∈ s, ⟪x, y⟫ - f x
 
@@ -66,11 +83,9 @@ lemma E_EReal (a : ℝ) (b : EReal) : a - b ≤ 0 ↔ a ≤ b := by
   by_cases h₁ : b = ⊤
   · rw [h₁]
     exact Iff.symm (le_iff_le_of_cmp_eq_cmp rfl)
-
   by_cases h₂ : b = ⊥
   · rw [h₂]
     exact Iff.symm (le_iff_le_of_cmp_eq_cmp rfl)
-
   lift b to ℝ using ⟨h₁, h₂⟩
   rw [← EReal.coe_sub]
   simp only [EReal.coe_le_coe_iff]
@@ -176,7 +191,7 @@ lemma pos_mul_convex_conjugate_not_bot {b : ℝ} [hsf : ProperFunction s f] (hb 
   · rw [fytop, EReal.coe_mul_top_of_pos]
     · simp
     exact hb
-  push_neg at fytop
+  push Not at fytop
   -- Since `f` is proper, its conjugate is not `⊥` either. So we can lift it to a real number.
   lift convex_conjugate s f y to ℝ with cfy
   · exact ⟨fytop, convex_conjugate_not_bot s f hs' y (by trivial)⟩
@@ -192,7 +207,8 @@ convex conjugate), then `a * X ≤ a * sup Y` for any positive real number `a`. 
 of `EReal.mul_le_mul_of_nonneg` for the specific structure of the convex conjugate, handling
 the cases where the supremum might be `⊤` or a finite number.
 -/
-lemma real_mul_convex_conjugate_inequ {u x : E} {a fu : ℝ} [hsf : ProperFunction univ f] (ha : a > 0)
+lemma real_mul_convex_conjugate_inequ {u x : E} {a fu : ℝ} [hsf : ProperFunction univ f]
+    (ha : a > 0)
     (sup_inequ₁ : (Real.toEReal (inner ℝ u x) - fu) ≤ ⨆ u, Real.toEReal (inner ℝ u x) - f u) :
     Real.toEReal a * (Real.toEReal (inner ℝ u x) - fu)
     ≤ Real.toEReal a * ⨆ u, Real.toEReal (inner ℝ u x) - f u := by
@@ -203,7 +219,7 @@ lemma real_mul_convex_conjugate_inequ {u x : E} {a fu : ℝ} [hsf : ProperFuncti
   by_cases htop : ⨆ u, Real.toEReal (inner ℝ u x) - f u = ⊤
   · rw [htop]
     simp [coe_mul_top_of_pos ha]
-  push_neg at htop
+  push Not at htop
   lift ⨆ u, Real.toEReal (inner ℝ u x) - f u to ℝ with sup
   · exact ⟨htop, LT.lt.ne_bot hcgx2⟩
   -- The problem reduces to an inequality over real numbers.
@@ -313,12 +329,12 @@ theorem fenchel_inequality (s : Set E) (f : E → EReal) [hf : ProperFunction s 
   · by_cases hb : b = ⊤
     · have : c + ⊤ = ⊤ := EReal.top_of_top_add (Ne.bot_lt fx_not_bot)
       simp [hb, this]
-    push_neg at hb
+    push Not at hb
     apply EReal.le_add_of_sub_le EReal.sub_ge_sub_of_ge_add_sub ha1 ha2 hc fx_not_bot hb b_not_bot
-  · push_neg at hc
+  · push Not at hc
     by_cases hb : b = ⊤
     · simp [hc, hb]
-    push_neg at hb
+    push Not at hb
     have : ⊤ + b = ⊤ := by
       rw [add_comm]
       apply EReal.top_of_top_add (Ne.bot_lt b_not_bot)
@@ -365,11 +381,11 @@ theorem convex_conjugate_convex {f : E → EReal} [hsf : ProperFunction univ f] 
     · rw [ha]
       have hb : b = 1 := by linarith
       simp [hb]
-    push_neg at ha
+    push Not at ha
     by_cases hb : b = 0
     · have ha' : a = 1 := by linarith
       simp [ha', hb]
-    push_neg at hb
+    push Not at hb
     have ha' : a > 0 := lt_of_le_of_ne apos (id (Ne.symm ha))
     have hb' : b > 0 := lt_of_le_of_ne bpos (id (Ne.symm hb))
     by_cases h1 : convex_conjugate univ f x = ⊤
@@ -394,7 +410,7 @@ theorem convex_conjugate_convex {f : E → EReal} [hsf : ProperFunction univ f] 
     have hfu2 := bot_lt_iff_ne_bot.1 (hsf.uninfinity u (by trivial))
     by_cases hfu1 : f u = ⊤
     · simp [hfu1, EReal.sub_top];
-    push_neg at hfu1
+    push Not at hfu1
     -- By the definition of supremum, we have `⟪u, x⟫ - f u ≤ f*(x)` and `⟪u, y⟫ - f u ≤ f*(y)`.
     have sup₁ : (Real.toEReal (inner ℝ u x) - f u) ≤ ⨆ u, Real.toEReal (inner ℝ u x) - f u := by
       apply le_iSup <| fun u => Real.toEReal (inner ℝ u x) - f u
@@ -408,7 +424,7 @@ theorem convex_conjugate_convex {f : E → EReal} [hsf : ProperFunction univ f] 
     have hcgy2 := LT.lt.ne_bot hcgy2
     have hcgx1 : ⨆ u, Real.toEReal (inner ℝ u x) - f u ≠ ⊤ := by
       simp [convex_conjugate] at h1
-      push_neg at h1; exact h1
+      push Not at h1; exact h1
     lift (f u) to ℝ with fu
     · exact ⟨hfu1, hfu2⟩
     /-
@@ -449,7 +465,7 @@ theorem convex_conjugate_convex {f : E → EReal} [hsf : ProperFunction univ f] 
           · exact ⟨hcgx1, hcgx2⟩
           simp [← EReal.coe_mul]
         simp [EReal.top_of_top_add this]
-      push_neg at hcgy1
+      push Not at hcgy1
       lift ⨆ u, Real.toEReal (inner ℝ u x) - f u to ℝ with c
       · exact ⟨hcgx1, hcgx2⟩
       lift ⨆ u, Real.toEReal (inner ℝ u y) - f u to ℝ with d
@@ -517,13 +533,13 @@ theorem dom_univ_convex_closure_convex (f : E → EReal)
   by_cases h : ∀ x ∈ univ, f x ≠ ⊥
   · have ht : ∀ x ∈ univ, Function.closure f univ x = ⊤ := by
       have hn : ¬ ∃ x_1 ∈ univ, f x_1 = ⊥ := by
-        push_neg; intro x _; rw [top_of_ne_bot_of_ne_proper hp h]; simp; trivial
+        push Not; intro x _; rw [top_of_ne_bot_of_ne_proper hp h]; simp; trivial
       simp [Function.closure, hp]
       intro x
       split_ifs; simp
     apply convexOn_dom_s_f_of_convexOn_s
     exact convex_on_p_top' fun x ↦ ht x trivial
-  push_neg at h
+  push Not at h
   have : (Function.closure f univ) = ⊥ := by
     simp [Function.closure, hp]
     rcases h with ⟨x, _, hx2⟩; use x
@@ -591,7 +607,7 @@ lemma inequ_cc_to_const {x : E} (l : E) :
     simp
     by_cases hc : convex_conjugate univ f l = ⊤
     · simp [hc]
-    push_neg at hc
+    push Not at hc
     by_cases hc2 : convex_conjugate univ f l = ⊥
     · simp [hc2]
       symm
@@ -602,14 +618,14 @@ lemma inequ_cc_to_const {x : E} (l : E) :
         use 1
         rw [← EReal.coe_sub]
         exact bot_lt_coe (inner ℝ l x - 1)
-      push_neg at hb2
+      push Not at hb2
       have hb1 : b ≠ ⊤ := LT.lt.ne_top hb
       lift b to ℝ using ⟨hb1,hb2⟩
       use (inner ℝ l x) - b - 1
       rw [← EReal.coe_sub]
       apply EReal.coe_lt_coe_iff.2
       linarith
-    push_neg at hc2
+    push Not at hc2
     lift convex_conjugate univ f l to ℝ with fcl
     · exact ⟨hc, hc2⟩
     simp
@@ -631,7 +647,7 @@ theorem const_le_cc_iff_affine_minorant {a : ℝ} {l : E} :
     · intro hccleq x; specialize hccleq x
       by_cases hfx1 : f x = ⊤
       · simp [hfx1]
-      push_neg at hfx1
+      push Not at hfx1
       have hfx2 : f x ≠ ⊥ := by
         by_contra h
         simp [h] at hccleq
@@ -642,7 +658,7 @@ theorem const_le_cc_iff_affine_minorant {a : ℝ} {l : E} :
     · intro hccleq x; specialize hccleq x
       by_cases hfx1 : f x = ⊤
       · simp [hfx1]
-      push_neg at hfx1
+      push Not at hfx1
       have hfx2 : f x ≠ ⊥ := by
         by_contra h
         simp [h] at hccleq
@@ -745,7 +761,7 @@ theorem bi_convex_conjugate_eq_closure
     have := h y
     rw [hy, le_bot_iff] at this
     exact absurd this (by simp [← EReal.coe_add])
-  · push_neg at hb
+  · push Not at hb
     have hcl : Function.closure f univ x = ⊤ := by
       simp only [Function.closure, if_neg hp]
       rw [if_neg (by rintro ⟨y, -, hy⟩; exact hb y hy)]
@@ -863,7 +879,7 @@ lemma convex_conjugate_is_convex [FiniteDimensional ℝ E] :
       by_cases h_exists_bot : ∃ x, f x = ⊥
       · obtain ⟨x, hx⟩ := h_exists_bot
         exact ⟨x, Or.inl hx⟩
-      · push_neg at h_exists_bot
+      · push Not at h_exists_bot
         have h_bot_univ : ∀ x ∈ univ, f x ≠ ⊥ := fun x _ => h_exists_bot x
         have h_top : ∀ x, f x = ⊤ :=
           fun x ↦ top_of_ne_bot_of_ne_proper hf h_bot_univ  (Set.mem_univ x)
@@ -1015,6 +1031,8 @@ end closure_conjugate
 
 section equiv
 
+/-- The set of functions `f : E → EReal` that are proper on `univ`, lower semicontinuous, and
+convex on `dom univ f`. -/
 def ProperClosedConvexFunction (E) [NormedAddCommGroup E] [InnerProductSpace ℝ E] :=
   {f: E → EReal | ProperFunction univ f ∧ LowerSemicontinuous f ∧ ConvexOn ℝ (dom univ f) f}
 
@@ -1046,6 +1064,8 @@ Proof Idea:
   proper closed convex function `g`. The proof is identical to `left_inv` because
   `f = g*` is itself a proper closed convex function (by the argument in `toFun`).
 -/
+/-- Conjugation `f ↦ convex_conjugate univ f` as a permutation of `ProperClosedConvexFunction E`,
+for `E` finite-dimensional; it is its own inverse. -/
 noncomputable def convex_conjugate_equiv
     (E) [NormedAddCommGroup E] [InnerProductSpace ℝ E] [FiniteDimensional ℝ E] :
     Equiv.Perm (ProperClosedConvexFunction E) where
@@ -1096,7 +1116,7 @@ noncomputable def convex_conjugate_equiv
     simp
     intro f hf
     simp [ProperClosedConvexFunction] at hf
-    haveI : ProperFunction univ f := hf.1
+    have : ProperFunction univ f := hf.1
     have : ConvexOn ℝ (dom univ f) f := by
       simp [dom]
       exact hf.2.2
@@ -1108,7 +1128,7 @@ noncomputable def convex_conjugate_equiv
     simp
     intro f hf
     simp [ProperClosedConvexFunction] at hf
-    haveI : ProperFunction univ f := hf.1
+    have : ProperFunction univ f := hf.1
     have : ConvexOn ℝ (dom univ f) f := by
       simp [dom]
       exact hf.2.2
@@ -1218,7 +1238,8 @@ theorem convex_conjugate_in_ri [FiniteDimensional ℝ E] (s : Set E) (f : E → 
       refine le_trans ?_ (hR t ht0 ht1)
       have h1 := hconv t ht0 ht1
       rw [hfz, hfx] at h1
-      have h2 : ((t : EReal) * v + ((1 - t : ℝ) : EReal) * u) = ((t * v + (1 - t) * u : ℝ) : EReal) := by
+      have h2 : ((t : EReal) * v + ((1 - t : ℝ) : EReal) * u) =
+          ((t * v + (1 - t) * u : ℝ) : EReal) := by
         norm_cast
       rw [h2] at h1
       have h3 : (⟪t • z + (1 - t) • x, y⟫ : ℝ) = t * ⟪z, y⟫ + (1 - t) * ⟪x, y⟫ := by
@@ -1250,6 +1271,8 @@ variable {E F : Type*}
   [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
   [NormedAddCommGroup F] [InnerProductSpace ℝ F] [CompleteSpace F]
 
+/-- The adjoint of a continuous linear equivalence `A : E ≃L[ℝ] F` between Hilbert spaces, as a
+continuous linear equivalence `F ≃L[ℝ] E`; its inverse is the adjoint of `A.symm`. -/
 noncomputable def ContinuousLinearEquiv.adjoint (A : E ≃L[ℝ] F) : F ≃L[ℝ] E where
   toFun := A.toContinuousLinearMap.adjoint
   map_add' := A.toContinuousLinearMap.adjoint.map_add'
@@ -1302,7 +1325,8 @@ theorem linearMap_convex_conjugate {a a' : E} {α : ℝ} (g : E → EReal) (A : 
     | coe G =>
       rw [show ((⟪A (x - a), b⟫ : ℝ) : EReal) - G + c = ((⟪A (x - a), b⟫ - G + c : ℝ) : EReal) by
         norm_cast]
-      rw [show ((⟪x, y⟫ : ℝ) : EReal) - (G + ⟪x, a'⟫ + α) = ((⟪x, y⟫ - (G + ⟪x, a'⟫ + α) : ℝ) : EReal) by
+      rw [show ((⟪x, y⟫ : ℝ) : EReal) - (G + ⟪x, a'⟫ + α) =
+          ((⟪x, y⟫ - (G + ⟪x, a'⟫ + α) : ℝ) : EReal) by
         norm_cast]
       congr 1
       linarith

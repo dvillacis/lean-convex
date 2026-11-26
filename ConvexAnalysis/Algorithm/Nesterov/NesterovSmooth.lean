@@ -21,8 +21,20 @@ section
 
 open Set
 
+/-- Nesterov's accelerated gradient method for a function `f` with `l`-Lipschitz gradient `f'`,
+with parameters `γ`: `y k = (1 - γ k) • x (k - 1) + γ k • v (k - 1)`,
+`x k = y k - (1 / l) • f' (y k)` and `v k = x (k - 1) + (1 / γ k) • (x k - x (k - 1))`,
+with `v 0 = initial_point`. -/
 class Nesterov (f : E → ℝ) (f' : E → E) (γ : ℕ+ → ℝ) (initial_point : E) where
-  (x : ℕ → E) (y : ℕ+ → E) (v : ℕ → E) (l : NNReal)
+  /-- The sequence of iterates, `x k = y k - (1 / l) • f' (y k)`. -/
+  (x : ℕ → E)
+  /-- The points `y k = (1 - γ k) • x (k - 1) + γ k • v (k - 1)` at which the gradient is
+  evaluated. -/
+  (y : ℕ+ → E)
+  /-- The auxiliary sequence `v k = x (k - 1) + (1 / γ k) • (x k - x (k - 1))`. -/
+  (v : ℕ → E)
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (l : NNReal)
   (diff : ∀ x₁, HasGradientAt f (f' x₁) x₁)
   (update1 : ∀ (k : ℕ+), y k = (1 - γ k) • x (k - 1) + γ k • v (k - 1))
   (update2 : ∀ (k : ℕ+), x k = y k - (1 / l.1) • (f' (y k)))
@@ -30,7 +42,7 @@ class Nesterov (f : E → ℝ) (f' : E → E) (γ : ℕ+ → ℝ) (initial_point
   (hl : l > 0) (smooth : LipschitzWith l f')
   (initial1 : γ 1 = (1 : ℝ)) (initial2 : v 0 = initial_point)
 
-variable {f : E → ℝ} {f' : E → E} {xm x₀: E} {γ : ℕ+ → ℝ } {alg : Nesterov f f' γ x₀}
+variable {f : E → ℝ} {f' : E → E} {xm x₀ : E} {γ : ℕ+ → ℝ} {alg : Nesterov f f' γ x₀}
 
 lemma one_iter (hfun : ConvexOn ℝ Set.univ f) (hg : ∀ (k : ℕ+), γ k = 2 / (k + 1)) :
     ∀ (k : ℕ+), f (alg.x k) - f xm - (1 - γ k) * (f (alg.x (k - 1)) - f xm) ≤
@@ -55,7 +67,8 @@ lemma one_iter (hfun : ConvexOn ℝ Set.univ f) (hg : ∀ (k : ℕ+), γ k = 2 /
         _ = f (alg.y k) + inner ℝ (f' (alg.y k)) (x' - alg.y k + (alg.x k - x')) +
             alg.l / 2 * ‖alg.x k - alg.y k‖ ^ 2 := by
           rw [add_comm (x' - alg.y k), add_sub (alg.x k - x'), sub_add, sub_self, sub_zero]; simp
-        _ = f (alg.y k) + inner ℝ (f' (alg.y k)) (x' - alg.y k) + inner ℝ (f' (alg.y k)) (alg.x k - x')
+        _ = f (alg.y k) + inner ℝ (f' (alg.y k)) (x' - alg.y k)
+            + inner ℝ (f' (alg.y k)) (alg.x k - x')
             + alg.l / 2 * ‖alg.x k - alg.y k‖ ^ 2 := by rw [inner_add_right, ← add_assoc]
         _ ≤ f x' + inner ℝ (f' (alg.y k)) (alg.x k - x') + alg.l / 2 * ‖alg.x k - alg.y k‖ ^ 2 := by
           rw [add_le_add_iff_right, add_le_add_iff_right]; exact t1
@@ -131,7 +144,8 @@ lemma one_iter (hfun : ConvexOn ℝ Set.univ f) (hg : ∀ (k : ℕ+), γ k = 2 /
         _ = alg.l / 2 * (‖alg.y k - (1 - γ k) • (alg.x (k - 1)) - γ k • xm‖ ^ 2 -
                 ‖alg.x k - (1 - γ k) • alg.x (k - 1) - γ k • xm‖ ^ 2) := by
             rw [smul_add, smul_smul]; simp
-            left; rw [mul_inv_cancel₀ (by linarith), one_smul, sub_smul, one_smul, add_comm, sub_add]
+            left; rw [mul_inv_cancel₀ (by linarith), one_smul, sub_smul, one_smul, add_comm,
+              sub_add]
   have this2 : alg.l / 2 * (‖alg.y k - (1 - γ k) • (alg.x (k - 1)) - γ k • xm‖ ^ 2 -
       ‖alg.x k - (1 - γ k) • alg.x (k - 1) - γ k • xm‖ ^ 2) = alg.l *
       (inner ℝ (alg.x k - alg.y k) ((1 - γ k) • (alg.x (k - 1)) + ((γ k) • xm)- alg.x k))
@@ -161,7 +175,7 @@ lemma one_iter (hfun : ConvexOn ℝ Set.univ f) (hg : ∀ (k : ℕ+), γ k = 2 /
   rw [this1, this2]
   exact h3 k
 
-theorem nesterov_algorithm_smooth (hfun: ConvexOn ℝ Set.univ f)
+theorem nesterov_algorithm_smooth (hfun : ConvexOn ℝ Set.univ f)
     (hg : ∀ (k : ℕ+), γ k = 2 / (k + 1)) (min : IsMinOn f Set.univ xm)
     (con : ∀ k : ℕ+ , (1 - γ k) / (γ k) ^ 2 ≤ 1 / (γ (k - 1)) ^ 2):
     ∀ k : ℕ+, f (alg.x k) - f xm ≤  2 * alg.l / ((k + 1) ^ 2) * ‖x₀ - xm‖ ^ 2 := by
@@ -244,3 +258,5 @@ theorem nesterov_algorithm_smooth (hfun: ConvexOn ℝ Set.univ f)
     · apply sq_pos_of_ne_zero
       exact Nat.cast_add_one_ne_zero ↑k
     · simp only [zero_lt_two, pow_pos]
+
+end

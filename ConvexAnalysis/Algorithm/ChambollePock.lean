@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 David Villacís. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: David Villacís
+Authors: David Villacís
 -/
 import Mathlib
 
@@ -113,7 +113,9 @@ def IsSaddle (xs : X) (ys : Y) : Prop :=
 
 /-- A run of the method, given by the variational inequalities of its proximal steps. -/
 structure Run where
+  /-- The sequence of primal iterates. -/
   x : ℕ → X
+  /-- The sequence of dual iterates. -/
   y : ℕ → Y
   x_mem : ∀ n, x (n + 1) ∈ C
   y_mem : ∀ n, y (n + 1) ∈ D

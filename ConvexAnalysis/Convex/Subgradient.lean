@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2024 Wanyi He. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Wanyi He, Chenyi Li
+Authors: Wanyi He, Chenyi Li
 -/
 import Mathlib.Topology.MetricSpace.Basic
 import Mathlib.Topology.Basic
@@ -52,17 +52,21 @@ variable {f : E → ℝ} {g : E} {x : E} {s : Set E}
 
 noncomputable section
 
-/-- Subgradient of functions --/
+/-- Subgradient of functions -/
 def HasSubgradientAt (f : E → ℝ) (g x : E) : Prop :=
   ∀ y, f y ≥ f x + ⟪g, y - x⟫
 
+/-- The vector `g` is a subgradient of `f` at `x` within `s`:
+`f y ≥ f x + ⟪g, y - x⟫` for all `y ∈ s`. -/
 def HasSubgradientWithinAt (f : E → ℝ) (g : E) (s : Set E) (x : E) : Prop :=
   ∀ y ∈ s, f y ≥ f x + ⟪g, y - x⟫
 
-/-- Subderiv of functions --/
+/-- Subderiv of functions -/
 def SubderivAt (f : E → ℝ) (x : E) : Set E :=
   {g : E| HasSubgradientAt f g x}
 
+/-- The subdifferential of `f` at `x` within `s`: the set of vectors `g` such that
+`f y ≥ f x + ⟪g, y - x⟫` for all `y ∈ s`. -/
 def SubderivWithinAt (f : E → ℝ) (s : Set E) (x : E) : Set E :=
   {g : E| HasSubgradientWithinAt f g s x}
 
@@ -144,7 +148,7 @@ variable {f₁ f₂ : E → ℝ} {t s : Set E}
 theorem SubderivAt.congr (h : f₁ = f₂) : SubderivAt f₁ x = SubderivAt f₂ x := by
   ext g; rw [h]
 
-theorem SubderivWithinAt.congr (h : ∀ y ∈ s, f₁ y = f₂ y) (hf : f₁ x = f₂ x):
+theorem SubderivWithinAt.congr (h : ∀ y ∈ s, f₁ y = f₂ y) (hf : f₁ x = f₂ x) :
     SubderivWithinAt f₁ s x = SubderivWithinAt f₂ s x := by
   ext g
   exact ⟨fun hg y ys => by rw [← h y ys, ← hf]; exact hg y ys,
@@ -157,7 +161,7 @@ theorem SubderivAt.congr_mono (h : ∀ y ∈ s, f₁ y = f₂ y) (hx : f₁ x = 
     SubderivWithinAt f₁ t x = SubderivWithinAt f₂ t x :=
   SubderivWithinAt.congr (fun y a => h y (h₁ a)) hx
 
-/-- The subderiv of `f` at `x` is a closed set. --/
+/-- The subderiv of `f` at `x` is a closed set. -/
 theorem SubderivAt.isClosed : ∀ x, IsClosed (SubderivAt f x) := by
   intro x
   by_cases e : SubderivAt f x = ∅
@@ -176,7 +180,7 @@ theorem SubderivWithinAt.isClosed : ∀ x, IsClosed (SubderivWithinAt f s x) := 
   obtain cg' := Tendsto.const_add (f x) (Filter.Tendsto.inner cg tendsto_const_nhds)
   apply le_of_tendsto_of_tendsto' cg' tendsto_const_nhds (fun n => hg n y ys)
 
-/-- The subderiv of `f` at `x` is a convex set. --/
+/-- The subderiv of `f` at `x` is a convex set. -/
 theorem SubderivAt.convex : ∀ x, Convex ℝ (SubderivAt f x) := by
   intro x
   by_cases e : SubderivAt f x = ∅
@@ -215,8 +219,8 @@ theorem SubderivWithinAt.convex : ∀ x ∈ s, Convex ℝ (SubderivWithinAt f s 
   rw [Eq.symm (Convex.combo_self abeq (f y)), ← eq]
   apply add_le_add ineq1 ineq2
 
-/-- Monotonicity of subderiv--/
-theorem subgradientAt_mono {u v : E} {f : E → ℝ}{y : E}
+/-- Monotonicity of subderiv -/
+theorem subgradientAt_mono {u v : E} {f : E → ℝ} {y : E}
     (hu : u ∈ SubderivAt f x) (hv : v ∈ SubderivAt f y) : ⟪u - v, x - y⟫ ≥ (0 : ℝ):= by
   specialize hu y; specialize hv x
   have ineq1 : ⟪u, x - y⟫ ≥ f x - f y := by
@@ -237,7 +241,7 @@ variable {f : E → ℝ} {g : E} {x y : E} {s : Set E}
 open Bornology
 
 /- The subderiv of `f` at interior point `x` is a nonempty set -/
-theorem SubderivWithinAt.Nonempty  (hf : ConvexOn ℝ s f) (hc : ContinuousOn f (interior s)):
+theorem SubderivWithinAt.Nonempty (hf : ConvexOn ℝ s f) (hc : ContinuousOn f (interior s)) :
     ∀ x ∈ interior s, (SubderivWithinAt f s x).Nonempty := by
   intro x hx
   obtain h := Banach_SubderivWithinAt.Nonempty hf hc hx
@@ -271,7 +275,7 @@ variable {f : E → ℝ} {g : E} {x y : E} {s : Set E}
 
 open Pointwise
 
-/-- Subderiv of differentiable convex functions --/
+/-- Subderiv of differentiable convex functions -/
 theorem SubderivWithinAt_eq_gradient {f'x : E} (hx : x ∈ interior s)
     (hf : ConvexOn ℝ s f) (h : HasGradientAt f (f'x) x) :
     SubderivWithinAt f s x = {f'x} := by
@@ -352,7 +356,7 @@ theorem SubderivWithinAt_eq_gradient {f'x : E} (hx : x ∈ interior s)
   apply mul_le_mul_of_nonneg_right _ tvpos.le
   apply sub_le_sub_right (le_sub_iff_add_le'.mpr (ineq1 mems))
 
-/-- Alternarive version for FDeriv --/
+/-- Alternarive version for FDeriv -/
 theorem SubderivWithinAt_eq_FDeriv {f' : E → (E →L[ℝ] ℝ)} (hx : x ∈ interior s)
     (hf : ConvexOn ℝ s f) (h : HasFDerivAt f (f' x) x) :
     SubderivWithinAt f s x = {(toDual ℝ E).symm (f' x)} := by
@@ -382,7 +386,7 @@ theorem isMinOn_of_HasSubgradentAt_zero (h : HasSubgradientAt f 0 x) : IsMinOn f
   intro y _; specialize h y
   rwa [inner_zero_left, add_zero] at h
 
-/-- `x'` minimize `f` if and only if `0` is a subgradient of `f` at `x'` --/
+/-- `x'` minimize `f` if and only if `0` is a subgradient of `f` at `x'` -/
 theorem HasSubgradientAt_zero_iff_isMinOn :
     HasSubgradientAt f 0 x ↔ IsMinOn f univ x :=
   ⟨isMinOn_of_HasSubgradentAt_zero, HasSubgradientAt_zero_of_isMinOn⟩
@@ -402,7 +406,8 @@ theorem HasSubgradientWithinAt_zero_iff_isMinOn :
 
 lemma SubderivAt_zero (xm : E) : 0 ∈ SubderivAt f xm ↔ ∀ y, f y ≥ f xm + ⟪0, y - xm⟫:= by rfl
 
-theorem first_order_convex_iff_subgradient (f : E → ℝ) (xm : E) : IsMinOn f univ xm ↔ 0 ∈ SubderivAt f xm := by
+theorem first_order_convex_iff_subgradient (f : E → ℝ) (xm : E) :
+    IsMinOn f univ xm ↔ 0 ∈ SubderivAt f xm := by
   rw [SubderivAt_zero xm ,isMinOn_iff]
   constructor
   · intro h y
@@ -424,7 +429,7 @@ open Pointwise
 
 variable {f : E → ℝ} {g : E} {x : E} {s : Set E}
 
-/-- Multiplication by a Positive Scalar--/
+/-- Multiplication by a Positive Scalar -/
 theorem HasSubgradientAt.pos_smul {c : ℝ} (h : HasSubgradientAt f g x) (hc : 0 < c) :
     HasSubgradientAt (c • f) (c • g) x := by
   intro y; rw [inner_smul_left]
@@ -458,7 +463,7 @@ theorem SubderivAt.pos_smul {c : ℝ} (hc : 0 < c) :
     _ = c * f x + inner ℝ g (y - x) := by rw [← eq]
 
 /-- Subderivatives of the sum of two functions is a subset of the sum of the
-subderivatives of the two functions --/
+subderivatives of the two functions -/
 theorem SubderivAt.add_subset {f₁ f₂ : E → ℝ} :
     ∀ (x : E), SubderivAt f₁ x + SubderivAt f₂ x ⊆ SubderivAt (f₁ + f₂) x := by
   intro x y hy y'
@@ -481,7 +486,7 @@ variable [CompleteSpace E]
 
 open Pointwise
 
-theorem SubderivAt.add {f₁ f₂ : E → ℝ} (h₁ : ConvexOn ℝ univ f₁) (h₂: ConvexOn ℝ univ f₂)
+theorem SubderivAt.add {f₁ f₂ : E → ℝ} (h₁ : ConvexOn ℝ univ f₁) (h₂ : ConvexOn ℝ univ f₂)
     (hcon : ContinuousOn f₁ univ) :
     ∀ (x : E), SubderivAt f₁ x + SubderivAt f₂ x = SubderivAt (f₁ + f₂) x := by
   intro x₀
@@ -491,7 +496,6 @@ theorem SubderivAt.add {f₁ f₂ : E → ℝ} (h₁ : ConvexOn ℝ univ f₁) (
   rw [Set.mem_ofPred] at hg; rw [Set.mem_add]
   let S₁ := {(x, y) : E × ℝ | y > f₁ (x + x₀) - f₁ x₀ - inner ℝ g x}
   let S₂ := {(x, y) : E × ℝ | y ≤ f₂ x₀ - f₂ (x + x₀)}
-
   have hs1 : Convex ℝ S₁ := by
     rw [convex_iff_forall_pos]; intro i hi j hj a b ha hb hab
     rw [Set.mem_ofPred] at hi hj ⊢; simp at hi hj ⊢
@@ -554,7 +558,6 @@ theorem SubderivAt.add {f₁ f₂ : E → ℝ} (h₁ : ConvexOn ℝ univ f₁) (
         · simp
       apply continuousOn_const
     apply ContinuousOn.inner continuousOn_const continuousOn_id
-
   obtain ⟨f, c, ⟨hsl, hsr⟩⟩ := geometric_hahn_banach_open hs1 hso hs2 hint
   have eq : ∃ a : E, ∃ b : ℝ, ∀ (p : E × ℝ), f p = inner ℝ a p.1 + b * p.2 := by
     let f1 := ContinuousLinearMap.comp f (ContinuousLinearMap.inl ℝ E ℝ)
@@ -571,7 +574,6 @@ theorem SubderivAt.add {f₁ f₂ : E → ℝ} (h₁ : ConvexOn ℝ univ f₁) (
     have : (p.1, (0 : ℝ)) + ((0 : E), p.2) = p := by simp
     nth_rw 1 [← this]; rw [ContinuousLinearMap.map_add]
   rcases eq with ⟨a, b, hab⟩
-
   have hin : (0, 0) ∈ S₂ := by rw [Set.mem_ofPred]; simp
   obtain hc0 := hsr (0, 0) hin
   rw [hab (0, 0)] at hc0; simp at hc0
@@ -597,7 +599,6 @@ theorem SubderivAt.add {f₁ f₂ : E → ℝ} (h₁ : ConvexOn ℝ univ f₁) (
     rw [ceq0] at htp
     specialize htp 1 (by linarith); rw [mul_one] at htp; linarith
   let hata := - (1 / b) • a
-
   have g1 : g + hata ∈ {g | HasSubgradientAt f₁ g x₀} := by
     rw [Set.mem_ofPred]; unfold HasSubgradientAt; intro x
     simp [hata]
@@ -728,5 +729,7 @@ theorem SubderivAt_abs (x : ℝ) :
     |x| + inner ℝ g (y - x) = -x + inner ℝ (-1) (y - x) := by rw [abs_of_neg hx, hg]
     _ = -y := by simp; ring
     _ ≤ |y| := neg_le_abs y
+
+end
 
 end

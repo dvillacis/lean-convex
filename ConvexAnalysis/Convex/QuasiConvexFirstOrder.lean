@@ -6,18 +6,24 @@ Authors: Chenyi Li
 import Mathlib.Analysis.Convex.Quasiconvex
 import ConvexAnalysis.Convex.ConvexFunction
 
+/-!
+# First order condition for quasiconvex functions
+
+This file proves first order conditions for a function `f` that is quasiconvex on a set `s`.
+The main result is `Quasiconvex_first_order_condition_right`: if `f` has Fréchet derivative
+`f' x` at `x ∈ s`, then `f' x (y - x) ≤ 0` for every `y ∈ s` with `f y ≤ f x`.
+-/
+
 open InnerProductSpace
 
 noncomputable section
-/-!
-  the first order condition for quasiconvex function
--/
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
-variable {f : E → ℝ} {f' : E → (E →L[ℝ] ℝ)} {s : Set E}{x: E}
+variable {f : E → ℝ} {f' : E → (E →L[ℝ] ℝ)} {s : Set E} {x : E}
 
+omit [CompleteSpace E] in
 theorem Quasiconvex_first_order_condition_right (h : HasFDerivAt f (f' x) x) (xs : x ∈ s)
-    (hf: QuasiconvexOn ℝ s f) : ∀ y ∈ s, f y ≤ f x  → f' x (y - x) ≤ 0 := by
+    (hf : QuasiconvexOn ℝ s f) : ∀ y ∈ s, f y ≤ f x  → f' x (y - x) ≤ 0 := by
   have h₁: ∀ ε > (0 : ℝ), ∃ δ > (0 : ℝ), ∀ (x' : E), ‖x - x'‖ ≤ δ →
       ‖f x' - f x - (f' x) (x' - x)‖ ≤ ε * ‖x - x'‖ := by
     apply HasFDeriv_Convergence h

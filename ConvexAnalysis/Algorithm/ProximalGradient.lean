@@ -23,11 +23,21 @@ open Set
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [CompleteSpace E]
 variable [ProperSpace E]
-variable {xm x₀: E} {s : Set E} {f : E → ℝ} {f' : E → E} {h : E → ℝ}
+variable {xm x₀ : E} {s : Set E} {f : E → ℝ} {f' : E → E} {h : E → ℝ}
 variable {t : ℝ} {x : ℕ → E} {L : NNReal}
 
-class proximal_gradient_method (f h: E → ℝ) (f' : E → E) (x₀ : E) where
-  (xm : E) (t : ℝ) (x : ℕ → E) (L : NNReal)
+/-- The proximal gradient method for `f + h`, started at `x₀`: `x (k + 1)` is a proximal point
+of `t • h` at `x k - t • f' (x k)`, with step size `0 < t ≤ 1 / L`. Here `f` and `h` are convex,
+`h` is continuous, the gradient `f'` of `f` is `L`-Lipschitz and `xm` minimizes `f + h`. -/
+class proximal_gradient_method (f h : E → ℝ) (f' : E → E) (x₀ : E) where
+  /-- A minimizer of `f + h`. -/
+  (xm : E)
+  /-- The step size. -/
+  (t : ℝ)
+  /-- The sequence of iterates. -/
+  (x : ℕ → E)
+  /-- The Lipschitz constant of the gradient `f'`. -/
+  (L : NNReal)
   (fconv : ConvexOn ℝ univ f) (hconv : ConvexOn ℝ univ h)
   (h₁ : ∀ x₁ : E, HasGradientAt f (f' x₁) x₁) (h₂ : LipschitzWith L f')
   (h₃ : ContinuousOn h univ) (minphi : IsMinOn (f + h) Set.univ xm)
@@ -157,7 +167,7 @@ theorem proximal_gradient_method_converge : ∀ (k : ℕ+),
     let diffφ := fun n : ℕ ↦ φx (n + 1) - φx n
     have diffφle : ∀ n : ℕ, diffφ n ≤ 0 := by
       intro n
-      show φ (alg.x (n + 1 + i)) - φ (alg.x (n + i)) ≤ 0
+      change φ (alg.x (n + 1 + i)) - φ (alg.x (n + i)) ≤ 0
       rw [add_right_comm]; linarith [φdecrease (n + i)]
     have nonpos : φx (j - i) - φx 0 ≤ 0 := by
       rw [← aux]; apply Finset.sum_nonpos
@@ -184,7 +194,7 @@ theorem proximal_gradient_method_converge : ∀ (k : ℕ+),
     let s := Finset.range k
     have : k = s.card := by simp [s]
     nth_rw 1 [this];
-    show s.card • (φ (alg.x k) - φ alg.xm) ≤ nr 0 - nr k
+    change s.card • (φ (alg.x k) - φ alg.xm) ≤ nr 0 - nr k
     rw [← Finset.sum_range_sub', ← Finset.sum_const]
     apply Finset.sum_le_sum
     intro i iin; apply φieq3 i; simp [s] at iin; linarith

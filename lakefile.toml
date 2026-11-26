@@ -1,11 +1,25 @@
 name = "convexanalysis"
-version = "0.1.0"
+version = "0.1.2"
+description = "Convex analysis and subdifferential calculus: subgradients, conjugates, proximal maps, optimality conditions and first-order algorithms, starting from a port of OptLib."
+keywords = ["math", "analysis", "optimization", "convex-analysis"]
+license = "Apache-2.0"
 defaultTargets = ["ConvexAnalysis"]
+testDriver = "ConvexAnalysisTest"
+# Dependents download the compiled library from the GitHub release of the pinned tag.
+preferReleaseBuild = true
 
 [leanOptions]
 pp.unicode.fun = true
 autoImplicit = false
 relaxedAutoImplicit = false
+# Mathlib's style and hygiene linters, except the two that would rewrite the ported proofs
+# (`simp` without a lemma list, and tactics acting on several goals).
+weak.linter.mathlibStandardSet = true
+weak.linter.flexible = false
+weak.linter.style.multiGoal = false
+
+[[lean_lib]]
+name = "ConvexAnalysisTest"
 
 [[require]]
 name = "mathlib"
