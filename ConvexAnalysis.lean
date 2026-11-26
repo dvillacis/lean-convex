@@ -31,14 +31,17 @@ import ConvexAnalysis.Differential.Lemmas
 import ConvexAnalysis.Differential.Subdifferential
 import ConvexAnalysis.Extended.AffineMinorant
 import ConvexAnalysis.Extended.AffineMinorantExistence
+import ConvexAnalysis.Extended.AffineMinorantHilbert
 import ConvexAnalysis.Extended.ClosedFunction_Closure
 import ConvexAnalysis.Extended.ConvexConjugate
 import ConvexAnalysis.Extended.ConvexIndicator
 import ConvexAnalysis.Extended.ConvexSupport
 import ConvexAnalysis.Extended.EReal
 import ConvexAnalysis.Extended.Epigraph
+import ConvexAnalysis.Extended.FenchelYoung
 import ConvexAnalysis.Extended.IntrinsicInterior
 import ConvexAnalysis.Extended.ProperFunction
+import ConvexAnalysis.Extended.SubgradientCalculus
 import ConvexAnalysis.Function.KL
 import ConvexAnalysis.Function.L1Space
 import ConvexAnalysis.Function.Lsmooth

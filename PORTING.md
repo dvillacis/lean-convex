@@ -129,3 +129,14 @@ Changes to the file layout:
 - New helper lemmas in that section: `affine_le_lowerSemicontinuousHull`,
   `affine_le_closure_of_proper`, `closure_proper_of_proper_convex` and
   `closure_convexOn_univ_of_proper`.
+
+Generalizations after the port (statements made stronger, names kept):
+
+- `bi_convex_conjugate_eq_self` (`f** = f` for lower semicontinuous convex `f`),
+  `convex_conjugate_congr_iff` and `ccp_convex_conjugate_bijective` now assume `[CompleteSpace E]`
+  instead of `[FiniteDimensional ℝ E]`. The proof of `bi_convex_conjugate_eq_self` no longer goes
+  through `f** = cl f`; it uses the new file `Extended/AffineMinorantHilbert`, which proves
+  Thm 12.1 with continuous affine minorants `⟪l, ·⟫ + w` directly.
+- `bi_convex_conjugate_eq_closure` (`f** = cl f` for convex `f`) keeps `[FiniteDimensional ℝ E]`:
+  its proof needs the lower semicontinuous hull of a proper convex function to be proper
+  (Cor 12.1.2), which uses finite dimension.
