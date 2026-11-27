@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 David Villacís. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: David Villacís
+Authors: David Villacís
 -/
 import ConvexAnalysis.Convex.Subgradient
 import ConvexAnalysis.Extended.ConvexConjugate
@@ -182,7 +182,7 @@ theorem hasERealSubgradientAt_conjugate_iff_of_biconjugate_eq
         rw [htop', EReal.top_add_coe] at this
         exact top_le_iff.1 this
       have hbotx : convex_conjugate univ (convex_conjugate univ f) x = ⊥ := by
-        show (⨆ y ∈ univ, (⟪y, x⟫ : EReal) - convex_conjugate univ f y) = ⊥
+        change (⨆ y ∈ univ, (⟪y, x⟫ : EReal) - convex_conjugate univ f y) = ⊥
         refine le_bot_iff.1 (iSup₂_le fun y _ => ?_)
         rw [hall y]
         simp
