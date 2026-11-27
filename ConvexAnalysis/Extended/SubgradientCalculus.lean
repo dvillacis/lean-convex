@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 David Villacís. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: David Villacís
+Authors: David Villacís
 -/
 import ConvexAnalysis.Extended.FenchelYoung
 import ConvexAnalysis.Extended.AffineMinorantExistence
@@ -327,7 +327,7 @@ lemma exists_affine_sandwich_aux {F G : E → ℝ} {C D : Set E}
     (x₀ := 0) (x := ⟨x - x₀, hxV⟩) (fun v hvC hvD => hle _ hvC hvD) h0int
     (show x₀ + ((0 : V) : E) ∈ D by simpa using hx₀D) hcont (hmemC x hxC) (hmemD x hxD)
     (by
-      show F (x₀ + (x - x₀)) = G (x₀ + (x - x₀))
+      change F (x₀ + (x - x₀)) = G (x₀ + (x - x₀))
       rw [add_sub_cancel]
       exact hFG)
   have hinner : ∀ y (hyV : y - x₀ ∈ V),
@@ -376,7 +376,7 @@ theorem exists_affine_sandwich_of_mem_intrinsicInterior {F G : E → ℝ} {C D :
       rw [smul_sub, smul_sub]
       nth_rw 1 [hx]
       abel
-    show α • a + β • b - x₀ ∈ V
+    change α • a + β • b - x₀ ∈ V
     rw [e]
     exact V.add_mem (V.smul_mem α ha) (V.smul_mem β hb)
   obtain ⟨s', hs₁, hs₂⟩ := exists_affine_sandwich_aux
@@ -636,7 +636,7 @@ theorem hasERealSubgradientAt_add_iff_of_sandwich {f g : E → EReal} {x s : E}
       rw [hu, hv, inner_add_left]
       norm_cast
       ring
-    show (f x + g x : EReal) + ⟪s₁ + s₂, y - x⟫ ≤ f y + g y
+    change (f x + g x : EReal) + ⟪s₁ + s₂, y - x⟫ ≤ f y + g y
     rw [e]
     exact add_le_add (h₁ y) (h₂ y)
 
@@ -840,7 +840,7 @@ theorem hasERealSubgradientAt_comp_iff_of_sandwich [CompleteSpace E] [CompleteSp
       exact sub_eq_zero.1 h0
   · rintro ⟨t, ht, rfl⟩ y
     have := ht (A y)
-    show h (A x) + ⟪ContinuousLinearMap.adjoint A t, y - x⟫ ≤ h (A y)
+    change h (A x) + ⟪ContinuousLinearMap.adjoint A t, y - x⟫ ≤ h (A y)
     rw [ContinuousLinearMap.adjoint_inner_left, map_sub]
     exact this
 
@@ -907,7 +907,7 @@ end Chain
 
 section FinsetSum
 
-variable {ι : Type*} [DecidableEq ι]
+variable {ι : Type*}
 
 /-- **Sum rule for finitely many continuous convex functions** `φ i : E → ℝ` on a Hilbert
 space: `∂(∑ᵢ φ i)(x) = ∑ᵢ ∂(φ i)(x)`. -/
@@ -916,6 +916,7 @@ theorem hasSubgradientAt_finset_sum_iff_of_continuous [CompleteSpace E] (s : Fin
     {x g : E} :
     HasSubgradientAt (fun v => ∑ i ∈ s, φ i v) g x ↔
       ∃ gi : ι → E, (∀ i ∈ s, HasSubgradientAt (φ i) (gi i) x) ∧ g = ∑ i ∈ s, gi i := by
+  classical
   induction s using Finset.induction_on generalizing g with
   | empty =>
     simp only [Finset.sum_empty, Finset.notMem_empty, IsEmpty.forall_iff, implies_true,

@@ -12,6 +12,28 @@ All notable changes to this library are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `Extended/SubgradientCalculus`: the sandwich theorem for a convex and a concave function, and
+  the sum, chain, constraint and finite-sum rules for subgradients on Hilbert spaces
+  (`_of_continuous`, `_of_continuousAt`), with the finite-dimensional statements as corollaries.
+  For extended-real functions, the sum and chain rules under an interior point of the domain and,
+  in finite dimension, under the relative-interior qualification (Rockafellar, Thm 23.8 and 23.9).
+- `Extended/FenchelYoung`: reciprocity `s ∈ ∂f(x) ↔ x ∈ ∂f*(s)` (Rockafellar, Thm 23.5) under
+  `f** x = f x`, under `(cl f) x = f x`, and for lower semicontinuous convex functions on a
+  Hilbert space.
+- `Extended/AffineMinorantHilbert`: a lower semicontinuous convex function on a Hilbert space is
+  the supremum of its continuous affine minorants.
+- `Algorithm/ChambollePock`: boundedness of the iterates, the ergodic `O(1/N)` rate for the
+  partial primal–dual gap and, in finite dimension, convergence to a saddle point
+  (Chambolle–Pock, Thm 1).
+
+### Changed
+
+- `bi_convex_conjugate_eq_self`, `convex_conjugate_congr_iff` and
+  `ccp_convex_conjugate_bijective` hold on Hilbert spaces (`[CompleteSpace E]`) instead of
+  finite dimension.
+
 ## [0.1.2] - 2026-11-25
 
 ### Added
